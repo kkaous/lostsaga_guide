@@ -79,7 +79,19 @@ td.hl{color:var(--gold);font-weight:700}
 .fxrow table.fx{font-size:12.5px;margin-top:4px;width:auto}.fxrow table.fx td,.fxrow table.fx th{padding-inline:12px}
 .fxrow table.fx tr.off td{color:var(--muted)}
 th.num{text-align:right}
+
+/* site nav (shared) */
+.sitenav{border-bottom:1px solid var(--line);background:var(--panel)}
+.sitenav-in{margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;min-height:52px}
+.sitenav-brand{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:17px;color:var(--ink);text-decoration:none;letter-spacing:.3px;margin-right:auto;padding:12px 0}
+.sitenav-brand b{color:var(--gold);font-weight:400}
+.sitenav-links{display:flex;gap:4px;margin:0;padding:0;list-style:none}
+.sitenav-links a{display:block;padding:7px 12px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap}
+.sitenav-links a:hover{color:var(--ink);background:color-mix(in srgb,var(--line) 45%,transparent)}
+.sitenav-links a[aria-current=page]{color:var(--panel);background:var(--steel);font-weight:700}
+@media (max-width:520px){.sitenav-brand{margin-right:0;width:100%;padding:12px 0 2px}.sitenav-links{padding-bottom:10px}}
 </style>
+<nav class="sitenav" aria-label="사이트 메뉴" data-noexport><div class="sitenav-in" style="max-width:1180px"><a class="sitenav-brand" href="index.html">LOSTSAGA <b>공략</b></a><ul class="sitenav-links"><li><a href="index.html">용병 / 장비 라인업</a></li><li><a href="skill_dictionary.html" aria-current=page>장비·기술 수치 사전</a></li></ul></div></nav>
 <div class="wrap">
   <h1>로사 장비·기술 수치 사전</h1>
   <div class="author">
