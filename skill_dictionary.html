@@ -78,6 +78,7 @@ td.hl{color:var(--gold);font-weight:700}
 .fxrow summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--accent,var(--ink));padding:4px 0;width:max-content}
 .fxrow table.fx{font-size:12.5px;margin-top:4px;width:auto}.fxrow table.fx td,.fxrow table.fx th{padding-inline:12px}
 .fxrow table.fx tr.off td{color:var(--muted)}
+th.num{text-align:right}
 </style>
 <div class="wrap">
   <h1>로사 장비·기술 수치 사전</h1>
@@ -259,6 +260,11 @@ $('#slot').addEventListener('change', () => { limit = 12; render(); });
 $('#tab-items').onclick = () => { mode='items'; try{localStorage.setItem('ls-tab','items')}catch(e){}; render(); };
 $('#tab-atk').onclick = () => { mode='atk'; try{localStorage.setItem('ls-tab','atk')}catch(e){}; render(); };
 $('#more').onclick = () => { limit += 20; render(); };
+// 표 머리글을 데이터 정렬(숫자=오른쪽)에 맞춤
+function alignHeads(root){ root.querySelectorAll('table').forEach(t => { const r = t.querySelector('tbody tr:not(.fxrow)'); if (!r) return;
+  const tds = r.children; t.querySelectorAll('thead th').forEach((th, k) => { if (tds[k] && tds[k].classList.contains('num')) th.classList.add('num'); }); }); }
+new MutationObserver(() => alignHeads($('#out'))).observe($('#out'), {childList:true, subtree:true});
+document.addEventListener('toggle', e => { if (e.target.tagName==='DETAILS') alignHeads(e.target); }, true);
 render();
 </script>
 
