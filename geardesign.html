@@ -277,7 +277,7 @@ new ResizeObserver(resize).observe(stage); resize();
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
-  for (const m of pulseMats) m.opacity = 0.65 + 0.35 * Math.sin(t * 3);
+  for (const m of pulseMats) m.opacity = 0.75 + 0.25 * Math.sin(t * 3);
   controls.update(); renderer.render(scene, camera);
 });
 
@@ -301,6 +301,24 @@ function skinTexture(orig, skin){
   c.fillRect(0, 0, cv.width, cv.height); c.drawImage(im, 0, 0);
   const t = prepTex(new THREE.CanvasTexture(cv)); skinTexCache.set(key, t); return t;
 }
+// 가산(빛) 텍스처 → 밝기를 알파로 바꾼 텍스처. 검정 = 완전 투명, 색은 그대로 유지
+const glowCache = new Map();
+function glowTexture(t){
+  const im = t?.image; if (!im || !im.width) return t;
+  if (glowCache.has(t.uuid)) return glowCache.get(t.uuid);
+  const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+  const c = cv.getContext('2d', { willReadFrequently:true }); c.drawImage(im, 0, 0);
+  const d = c.getImageData(0, 0, cv.width, cv.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4){
+    const m = Math.max(p[i], p[i+1], p[i+2]);
+    if (m === 0){ p[i+3] = 0; continue; }
+    const k = 255 / m;
+    p[i] = Math.min(255, p[i] * k); p[i+1] = Math.min(255, p[i+1] * k); p[i+2] = Math.min(255, p[i+2] * k);
+    p[i+3] = Math.round(m * p[i+3] / 255);
+  }
+  c.putImageData(d, 0, 0);
+  const g = prepTex(new THREE.CanvasTexture(cv)); glowCache.set(t.uuid, g); return g;
+}
 const SKIN = () => state.db?.character?.skin || [0.95, 0.82, 0.56];
 
 async function buildModel(file, mats){
@@ -314,8 +332,11 @@ async function buildModel(file, mats){
     const map = (info.tex && state.custom[info.tex]?.texture) || orig;
     if (info.blend === 'add'){
       const e = info.emissive || [1,1,1];
-      mat = new THREE.MeshBasicMaterial({ map, color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
-        blending:THREE.AdditiveBlending, transparent:true, depthWrite:false, side:THREE.DoubleSide });
+      // 빛 효과: 게임은 검은 배경 위에 더하는 방식(가산)이라 밝은 배경에선 색이 바래거나 어둡게 보임
+      // → 밝기를 투명도로 바꾼 텍스처로 일반 합성 (검은 부분은 투명, 빨간 빔은 빨갛게)
+      mat = new THREE.MeshBasicMaterial({ map: glowTexture(map), color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
+        transparent:true, depthWrite:false, side:THREE.DoubleSide });
+      mat.userData.glow = true;
       pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
     } else {
       const isSkin = !!info.skin;
@@ -575,7 +596,7 @@ function renderSlots(){
     el.querySelector('.dlUv').onclick = () => uvGuide(s, false);
     el.querySelector('.dlLine').onclick = () => uvGuide(s, true);
     el.querySelector('.reset').onclick = () => { const c = mine(); if (c){ URL.revokeObjectURL(c.url); delete state.custom[s.tex]; }
-      const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = u.orig; m.needsUpdate = true; } refresh(); showErr(''); };
+      const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = m.userData.glow ? glowTexture(u.orig) : u.orig; m.needsUpdate = true; } refresh(); showErr(''); };
     refresh(); box.append(el);
   }
 }
@@ -596,7 +617,7 @@ async function applySkin(s, bmp){
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   const tex = prepTex(new THREE.CanvasTexture(cv));
   state.custom[s.tex] = { url: URL.createObjectURL(blob), texture: tex };
-  const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = tex; m.needsUpdate = true; }
+  const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = m.userData.glow ? glowTexture(tex) : tex; m.needsUpdate = true; }
 }
 
 // UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG / lineOnly 면 투명 배경에 선만
