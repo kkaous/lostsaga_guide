@@ -390,14 +390,14 @@ function buildAliases(){
   const items = state.db.items;
   for (const [a, nm] of Object.entries(state.db.aliases || {})){
     const n = nz(base(nm)).replace(/의/g,'');
-    for (const it of items){ const t = nz(base(it.name)).replace(/의/g,''); if (t.includes(n)) add(0, a, it.code); }
+    for (const it of items) for (const nm2 of [it.name, ...(it.aka || [])]){ const t = nz(base(nm2)).replace(/의/g,''); if (t.includes(n)) add(0, a, it.code); }
   }
   for (const it of items){
     const chs = SLOTCH[CAT_KO[it.cat]] || [];
     const mk = (st0, t) => { const st = nz(st0); if (!st) return;
       for (const c of chs){ add(t, st.slice(0,2)+c, it.code); add(t, st[0]+st[st.length-1]+c, it.code); add(t, st+c, it.code);
         if (st.length >= 3) add(t, st.slice(0,3)+c, it.code); } };
-    mk(base(it.name).replace(SLOTWORD,'').replace(/의$/,'').trim(), 1);
+    for (const nm2 of [it.name, ...(it.aka || [])]) mk(base(nm2).replace(SLOTWORD,'').replace(/의$/,'').trim(), 1);
     if (it.merc) mk(it.merc, 2);
   }
 }
@@ -408,7 +408,7 @@ function matches(q){
   // 수치 사전과 같은 우선순위: 수동 단축어 → 장비 이름 규칙 → 용병 이름 규칙 중 먼저 걸리는 것 하나만
   for (const M of ALIAS) if (M.has(nq)){ M.get(nq).forEach(c => hit.add(c)); break; }
   for (const it of state.db.items)
-    if (nz(it.name).includes(nq) || nz(it.merc).includes(nq) || String(it.code).includes(nq)) hit.add(it.code);
+    if ([it.name, ...(it.aka || [])].some(n => nz(n).includes(nq)) || nz(it.merc).includes(nq) || String(it.code).includes(nq)) hit.add(it.code);
   return hit;
 }
 function renderList(){
@@ -432,7 +432,7 @@ function renderList(){
     li.append(b); frag.append(li);
   }
   ul.append(frag);
-  $('#count').textContent = list.length ? `${list.length}개` : '검색 결과가 없어요 · 게임에서 스킨 변경이 되는 장비만 나와요';
+  $('#count').textContent = list.length ? `${list.length}개` : '검색 결과가 없어요';
 }
 $('#q').addEventListener('input', renderList);
 
