@@ -94,6 +94,9 @@ a{color:inherit}
 .tb[aria-pressed=true]{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700}
 .tb svg{width:15px;height:15px}
 .tb-sep{flex:1}
+.seg{display:inline-flex}
+.seg .tb:first-child{border-radius:8px 0 0 8px}
+.seg .tb:last-child{border-radius:0 8px 8px 0;margin-left:-1px}
 .variants{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
 .variants:empty{display:none}
 
@@ -177,6 +180,9 @@ a{color:inherit}
       <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
     </div>
     <div class="toolbar">
+      <div class="seg" role="group" aria-label="치장 성별">
+        <button class="tb" id="gM" aria-pressed="true">남성</button><button class="tb" id="gW" aria-pressed="false">여성</button>
+      </div>
       <button class="tb" id="tChar" aria-pressed="false" title="캐릭터가 들고 있는 모습으로 보기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><path d="M5 11h14M12 8v7m0 0-4 6m4-6 4 6"/></svg>캐릭터 착용</button>
       <button class="tb" id="tSpin" aria-pressed="true" title="자동 회전">
@@ -239,7 +245,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const DATA = 'geardesign_data/';
 const $ = s => document.querySelector(s);
-const state = { db:null, cat:null, item:null, variant:0, showChar:false, outline:true, wire:false, fx:true,
+const state = { db:null, cat:null, item:null, variant:0, showChar:false, outline:true, wire:false, fx:true, gender:'m',
                 custom:{} /* tex → {url, texture, w, h} — 장비를 바꿔도 유지 */ };
 
 /* ───────── 3D 기본 ───────── */
@@ -435,12 +441,13 @@ async function selectItem(it, variant = 0){
   for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
   $('#sicon').hidden = !iconSrc(it); if (iconSrc(it)) $('#sicon').src = iconSrc(it);
-  $('#scode').textContent = [state.db.categories[it.cat], it.merc].filter(Boolean).join(' · ');
+  $('#scode').textContent = [state.db.categories[it.cat], it.merc,
+    it.female ? (state.gender === 'w' ? '여성용' : '남성용') : (it.cat === 'weapon' ? '' : '남녀 공용')].filter(Boolean).join(' · ');
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   renderVariants(); renderSlots();
   const token = ++loadToken;
   try {
-    const v = it.variants[variant];
+    const v = cur(it).variants[variant] || cur(it).variants[0];
     texUsers.clear(); pulseMats.length = 0; outlineMats.length = 0;
     const gs = await Promise.all(partsOf(v).map(p => buildModel(p.file, p.materials)));
     if (token !== loadToken) return;
@@ -453,26 +460,29 @@ async function selectItem(it, variant = 0){
 }
 function renderVariants(){
   const box = $('#variants'); box.textContent = '';
-  const vs = state.item.variants; if (vs.length < 2) return;
+  const vs = cur(state.item).variants; if (vs.length < 2) return;
   vs.forEach((v, i) => { const b = document.createElement('button'); b.className = 'tb';
     b.textContent = `모양 ${i + 1}`; b.title = partsOf(v).map(p => p.mesh).join(', '); b.setAttribute('aria-pressed', i === state.variant);
     b.onclick = () => selectItem(state.item, i); box.append(b); });
 }
 
 /* ───────── 캐릭터 ───────── */
-let charReady = null;
+const charReady = {};
 function ensureChar(){
-  if (!state.db.character) return Promise.resolve();
-  if (!charReady) charReady = Promise.all(state.db.character.parts.map(async p => {
+  const gd = state.gender, ch = (gd === 'w' && state.db.characterW) || state.db.character;
+  if (!ch) return Promise.resolve();
+  if (!charReady[gd]) charReady[gd] = Promise.all(ch.parts.map(async p => {
       const g = await buildModel(p.file, p.materials.map(m => ({ ...m, skin:true })));
       g.userData.part = /body/.test(p.mesh) ? 'body' : /hand/.test(p.mesh) ? 'hand' : /face|head/.test(p.mesh) ? 'face' : 'etc';
+      g.userData.gender = gd;
       return g; })).then(gs => gs.forEach(g => charGroup.add(g)));
-  return charReady;
+  return charReady[gd];
 }
 // 갑옷을 보고 있으면 마네킹의 몸/손은 숨기고 갑옷 몸/손으로 대신
 function syncCharParts(){
-  const roles = new Set(partsOf(state.item.variants[state.variant]).map(p => p.role));
-  for (const g of charGroup.children) g.visible = !roles.has(g.userData.part);
+  const v = cur(state.item).variants[state.variant] || cur(state.item).variants[0];
+  const roles = new Set(partsOf(v).map(p => p.role));
+  for (const g of charGroup.children) g.visible = g.userData.gender === state.gender && !roles.has(g.userData.part);
 }
 $('#tChar').onclick = async e => {
   if (!state.db?.character){ toast('캐릭터 모델이 아직 변환되지 않았어요.'); return; }
@@ -512,12 +522,17 @@ toggle('#tOutline', 'outline', v => root.traverse(o => { if (o.userData.outline)
 toggle('#tFx', 'fx', v => root.traverse(o => { if (o.userData.fx) o.visible = v; }));
 toggle('#tWire', 'wire', v => root.traverse(o => { if (o.isMesh && !o.userData.outline) o.material.wireframe = v; }));
 $('#tReset').onclick = () => frame(true);
+for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
+  if (state.gender === g) return;
+  state.gender = g; $('#gM').setAttribute('aria-pressed', g === 'm'); $('#gW').setAttribute('aria-pressed', g === 'w');
+  if (state.item) selectItem(state.item, 0);
+};
 $('#tShot').onclick = () => download(renderer.domElement.toDataURL('image/png'), `${state.item?.name || 'gear'}_미리보기.png`);
 
 /* ───────── 스킨 슬롯 ───────── */
 function renderSlots(){
   const box = $('#slots'); box.textContent = '';
-  const slots = state.item.slots;
+  const slots = cur(state.item).slots;
   $('#slotCount').textContent = slots.length ? `${slots.length}장` : '';
   if (!slots.length){ box.innerHTML = '<div class="empty">이 장비는 바꿀 수 있는 텍스처가 없어요.</div>'; return; }
   for (const s of slots){
@@ -590,7 +605,7 @@ async function uvGuide(s, lineOnly){
     ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
   }
   ctx.strokeStyle = '#e0245e'; ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
-  for (const v of state.item.variants) for (const p of partsOf(v)){
+  for (const v of cur(state.item).variants) for (const p of partsOf(v)){
     const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
     for (const o of meshes){
       const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
@@ -610,6 +625,8 @@ async function uvGuide(s, lineOnly){
 }
 
 /* ───────── 도우미 ───────── */
+// 여성 치장이면 여성용 모델/스킨(있을 때만), 아니면 남성(공용)
+const cur = it => (state.gender === 'w' && it.female) ? it.female : it;
 const partsOf = v => v.parts || [{ role:'equip', mesh:v.mesh, file:v.file, materials:v.materials }];
 // 아이콘은 수치 사전(skill_dictionary.html)과 같은 방식: items.json 안에 base64(webp)로 들어 있음
 function iconSrc(it){
