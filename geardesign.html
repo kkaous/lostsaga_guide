@@ -105,6 +105,10 @@ a{color:inherit}
 .badge.size{background:var(--gold-soft);color:var(--gold)}
 .badge.mine{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
 .fname{font-size:12px;color:var(--muted);word-break:break-all}
+.slot-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.slot-title b{font-size:14px}
+.slot-title b small{font-weight:500;color:var(--muted);font-size:12px;margin-left:4px}
+.fxnote{font-size:12px;color:var(--muted);background:var(--panel-2);border-radius:6px;padding:6px 8px}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .btn{display:inline-flex;justify-content:center;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 6px;font-size:12.5px;cursor:pointer;text-align:center}
 .btn:hover{border-color:var(--steel)}
@@ -201,8 +205,9 @@ a{color:inherit}
       <input type="file" accept=".jpg,.jpeg,image/jpeg" hidden>
     </label>
     <div class="slot-info">
-      <div class="slot-row"><span class="badge size"></span><span class="badge state"></span></div>
-      <div class="fname"></div>
+      <div class="slot-title"><b class="sname"></b><span class="badge size"></span></div>
+      <div class="slot-row"><span class="fname"></span><span class="badge state"></span></div>
+      <div class="fxnote" hidden>빛나는 효과에 쓰이는 이미지예요. 검은 부분은 빛이 나지 않아요.</div>
       <div class="err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span></span></div>
       <div class="btns">
         <button class="btn primary up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 20h16"/></svg>내 스킨 JPG 올리기</button>
@@ -292,9 +297,9 @@ async function buildModel(file, mats, { skin } = {}){
         color: skin ? new THREE.Color(...skin) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
       if (!skin && (info.cutout || (info.alpha && info.blend !== 'alpha'))) mat.alphaTest = 0.5;
       if (info.blend === 'alpha'){ mat.transparent = true; mat.depthWrite = false; }
-      if (!skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
       if (info.outline) addOutline(o, info);
     }
+    if (!skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
     mat.wireframe = state.wire;
     o.material = mat;
   }
@@ -453,6 +458,9 @@ function renderSlots(){
       st.textContent = mine() ? '내 스킨 적용 중' : '원본'; st.classList.toggle('mine', !!mine());
       el.querySelector('.reset').hidden = !mine();
     };
+    const no = s.no || (slots.indexOf(s) + 1);
+    el.querySelector('.sname').innerHTML = `스킨 ${no}<small>${s.fx ? '이펙트' : (no === 1 ? '본체' : '')}</small>`;
+    el.querySelector('.fxnote').hidden = !s.fx;
     el.querySelector('.size').textContent = `${s.w} × ${s.h} px`;
     el.querySelector('.fname').textContent = s.tex.replace(/\.\w+$/, '') + (s.alpha ? ' · 투명 영역 있음' : '');
     const showErr = msg => { err.hidden = !msg; err.querySelector('span').textContent = msg || ''; };
