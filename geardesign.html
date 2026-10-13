@@ -66,7 +66,10 @@ a{color:inherit}
 .search input:focus{border-color:var(--steel)}
 .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
 .items{list-style:none;margin:0;padding:0 6px 8px;overflow:auto;flex:1;min-height:120px}
-.items button{display:flex;align-items:baseline;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer}
+.items button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:5px 10px 5px 6px;cursor:pointer}
+.items .ic{width:44px;height:44px;flex:none;border-radius:8px;background:var(--panel-2);display:grid;place-items:center;overflow:hidden}
+.items .ic img{width:44px;height:44px;object-fit:contain}
+.items .nm{flex:1;min-width:0;line-height:1.35}
 .items button:hover{background:var(--panel-2)}
 .items button[aria-selected=true]{background:var(--gold-soft);font-weight:700}
 .items .code{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
@@ -78,7 +81,8 @@ a{color:inherit}
 .stage canvas{display:block;width:100%;height:100%;border-radius:12px 12px 0 0;cursor:grab}
 .stage canvas:active{cursor:grabbing}
 .stage-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
-.stage-title{position:absolute;left:14px;top:12px;pointer-events:none}
+.stage-title{position:absolute;left:14px;top:12px;pointer-events:none;display:flex;align-items:center;gap:10px}
+.stage-title img{width:52px;height:52px}
 .stage-title b{display:block;font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.3px}
 .stage-title span{font-size:12px;color:var(--muted)}
 .hint{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--panel) 70%,transparent);padding:2px 8px;border-radius:6px}
@@ -166,7 +170,7 @@ a{color:inherit}
   <!-- 3D 뷰어 -->
   <section class="card viewer" aria-label="3D 미리보기">
     <div class="stage" id="stage">
-      <div class="stage-title" id="stitle" hidden><b id="sname"></b><span id="scode"></span></div>
+      <div class="stage-title" id="stitle" hidden><img id="sicon" alt="" hidden><div><b id="sname"></b><span id="scode"></span></div></div>
       <div class="stage-msg" id="smsg">장비 목록을 불러오는 중…</div>
       <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
     </div>
@@ -356,7 +360,9 @@ function renderList(){
   for (const it of list){
     const li = document.createElement('li'), b = document.createElement('button');
     b.setAttribute('role','option'); b.setAttribute('aria-selected', it === state.item);
-    b.innerHTML = `<span></span><span class="code">${it.code}</span>`; b.firstChild.textContent = it.name;
+    b.dataset.code = it.code;
+    b.innerHTML = `<span class="ic">${iconSrc(it) ? `<img loading="lazy" alt="" src="${iconSrc(it)}">` : ''}</span><span class="nm"></span><span class="code">${it.code}</span>`;
+    b.querySelector('.nm').textContent = it.name;
     b.onclick = () => selectItem(it);
     li.append(b); frag.append(li);
   }
@@ -370,8 +376,9 @@ let loadToken = 0;
 async function selectItem(it, variant = 0){
   state.item = it; state.variant = variant;
   history.replaceState(null, '', '#' + it.code);
-  for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.lastChild.textContent == it.code);
+  for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
+  $('#sicon').hidden = !iconSrc(it); if (iconSrc(it)) $('#sicon').src = iconSrc(it);
   $('#scode').textContent = `${state.db.categories[it.cat] || ''} · 코드 ${it.code}`;
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   renderVariants(); renderSlots();
@@ -538,6 +545,11 @@ async function uvGuide(s, lineOnly){
 }
 
 /* ───────── 도우미 ───────── */
+// 아이콘은 수치 사전(skill_dictionary.html)과 같은 방식: items.json 안에 base64(webp)로 들어 있음
+function iconSrc(it){
+  const b = it.icon && state.db.icons?.[it.icon]; if (!b) return '';
+  return `data:image/${b.startsWith('iVBOR') ? 'png' : b.startsWith('/9j/') ? 'jpeg' : 'webp'};base64,${b}`;
+}
 function loadImage(src){ return new Promise((ok, no) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = no; i.src = src; }); }
 function download(href, name){ const a = document.createElement('a'); a.href = href; a.download = name; document.body.append(a); a.click(); a.remove(); }
 function toast(msg){ const m = $('#smsg'); m.hidden = false; m.textContent = msg; setTimeout(() => { if (state.item) m.hidden = true; }, 2200); }
