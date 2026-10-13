@@ -390,7 +390,7 @@ function buildAliases(){
   const items = state.db.items;
   for (const [a, nm] of Object.entries(state.db.aliases || {})){
     const n = nz(base(nm)).replace(/의/g,'');
-    for (const it of items){ const t = nz(base(it.name)).replace(/의/g,''); if (t.includes(n) || n.includes(t)) add(0, a, it.code); }
+    for (const it of items){ const t = nz(base(it.name)).replace(/의/g,''); if (t.includes(n)) add(0, a, it.code); }
   }
   for (const it of items){
     const chs = SLOTCH[CAT_KO[it.cat]] || [];
@@ -426,12 +426,12 @@ function renderList(){
     b.dataset.code = it.code;
     b.innerHTML = `<span class="ic">${iconSrc(it) ? `<img loading="lazy" alt="" src="${iconSrc(it)}">` : ''}</span><span class="nm"><span></span><small></small></span>`;
     b.querySelector('.nm span').textContent = it.name;
-    b.querySelector('.nm small').textContent = it.merc || '';
+    b.querySelector('.nm small').textContent = it.merc || (it.rare ? '레어 장비' : '');
     b.onclick = () => selectItem(it);
     li.append(b); frag.append(li);
   }
   ul.append(frag);
-  $('#count').textContent = list.length ? `${list.length}개` : '검색 결과가 없어요';
+  $('#count').textContent = list.length ? `${list.length}개` : '검색 결과가 없어요 · 게임에서 스킨 변경이 되는 장비만 나와요';
 }
 $('#q').addEventListener('input', renderList);
 
@@ -443,7 +443,7 @@ async function selectItem(it, variant = 0){
   for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
   $('#sicon').hidden = !iconSrc(it); if (iconSrc(it)) $('#sicon').src = iconSrc(it);
-  $('#scode').textContent = [state.db.categories[it.cat], it.merc,
+  $('#scode').textContent = [state.db.categories[it.cat], it.merc || (it.rare ? '레어 장비' : ''),
     it.female ? (state.gender === 'w' ? '여성용' : '남성용') : (it.cat === 'weapon' ? '' : '남녀 공용')].filter(Boolean).join(' · ');
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   renderVariants(); renderSlots();
