@@ -67,9 +67,11 @@ a{color:inherit}
 .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
 .items{list-style:none;margin:0;padding:0 6px 8px;overflow:auto;flex:1;min-height:120px}
 .items button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:5px 10px 5px 6px;cursor:pointer}
-.items .ic{width:44px;height:44px;flex:none;border-radius:8px;background:var(--panel-2);display:grid;place-items:center;overflow:hidden}
+.items .ic{width:44px;height:44px;flex:none;display:grid;place-items:center}
 .items .ic img{width:44px;height:44px;object-fit:contain}
 .items .nm{flex:1;min-width:0;line-height:1.35}
+.items .nm small{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
+.items .grp{list-style:none;font-size:12px;font-weight:700;color:var(--muted);padding:10px 10px 4px}
 .items button:hover{background:var(--panel-2)}
 .items button[aria-selected=true]{background:var(--gold-soft);font-weight:700}
 .items .code{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
@@ -161,7 +163,7 @@ a{color:inherit}
     <div class="cats" id="cats" role="group" aria-label="분류"></div>
     <label class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="이름 또는 코드 검색" autocomplete="off" aria-label="장비 검색">
+      <input id="q" type="search" placeholder="장비·용병 이름, 단축어 (예: 릴리모, 퓨리갑)" autocomplete="off" aria-label="장비 검색">
     </label>
     <ul class="items" id="items" role="listbox" aria-label="장비"></ul>
     <div class="count" id="count"></div>
@@ -283,7 +285,19 @@ const loadTex = f => { if (!texCache.has(f)) texCache.set(f, texLoader.loadAsync
 const pulseMats = [];
 const texUsers = new Map(); // tex 이름 → 그 텍스처를 쓰는 재질들 (스킨 교체용)
 
-async function buildModel(file, mats, { skin } = {}){
+// 맨살 재질: 텍스처 알파만큼 텍스처, 나머지는 피부색 (게임의 blend_texture_alpha + tfactor)
+const skinTexCache = new Map();
+function skinTexture(orig, skin){
+  if (!orig?.image) return null;
+  const key = orig.uuid; if (skinTexCache.has(key)) return skinTexCache.get(key);
+  const im = orig.image, cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+  const c = cv.getContext('2d'); c.fillStyle = `rgb(${skin.map(v => Math.round(v * 255)).join(',')})`;
+  c.fillRect(0, 0, cv.width, cv.height); c.drawImage(im, 0, 0);
+  const t = prepTex(new THREE.CanvasTexture(cv)); skinTexCache.set(key, t); return t;
+}
+const SKIN = () => state.db?.character?.skin || [0.95, 0.82, 0.56];
+
+async function buildModel(file, mats){
   const g = (await loadGLB(file)).scene.clone(true);
   const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
   for (const o of meshes){
@@ -298,13 +312,14 @@ async function buildModel(file, mats, { skin } = {}){
         blending:THREE.AdditiveBlending, transparent:true, depthWrite:false, side:THREE.DoubleSide });
       pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
     } else {
-      mat = new THREE.MeshToonMaterial({ map: skin ? null : map, gradientMap:toonRamp,
-        color: skin ? new THREE.Color(...skin) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
-      if (!skin && (info.cutout || (info.alpha && info.blend !== 'alpha'))) mat.alphaTest = 0.5;
+      const isSkin = !!info.skin;
+      mat = new THREE.MeshToonMaterial({ map: isSkin ? skinTexture(orig, SKIN()) : map, gradientMap:toonRamp,
+        color: isSkin && !orig ? new THREE.Color(...SKIN()) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (!isSkin && (info.cutout || (info.alpha && info.blend !== 'alpha'))) mat.alphaTest = 0.5;
       if (info.blend === 'alpha'){ mat.transparent = true; mat.depthWrite = false; }
       if (info.outline) addOutline(o, info);
     }
-    if (!skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
+    if (!info.skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
     mat.wireframe = state.wire;
     o.material = mat;
   }
@@ -336,11 +351,11 @@ async function init(){
       : '장비 데이터를 불러오지 못했어요.<br><small>geardesign_data 폴더가 같이 올라갔는지 확인해 주세요.</small>';
     return;
   }
-  const cats = [...new Set(state.db.items.map(i => i.cat))];
+  const cats = [...new Set(state.db.items.map(i => i.cat))].sort((a, b) => CAT_ORDER[a] - CAT_ORDER[b]);
   const catBox = $('#cats');
   for (const c of cats){
     const b = document.createElement('button'); b.textContent = state.db.categories[c] || c; b.dataset.cat = c;
-    b.onclick = () => { state.cat = c; renderCats(); renderList(); };
+    b.onclick = () => { state.cat = c; $('#q').value = ''; renderCats(); renderList(); };
     catBox.append(b);
   }
   if (cats.length < 2) catBox.hidden = true;
@@ -351,18 +366,59 @@ async function init(){
   if (first) selectItem(first); else $('#smsg').textContent = '변환된 장비가 없어요.';
 }
 function renderCats(){ for (const b of $('#cats').children) b.setAttribute('aria-pressed', b.dataset.cat === state.cat); }
+/* ───────── 검색: 장비 이름 · 코드 · 용병 이름 · 단축어 ─────────
+   단축어 규칙은 수치 사전(skill_dictionary.html)과 같음: 수동 표(MANUAL) → 장비 이름 기반 → 용병 이름 기반
+   예) 릴리모 = 릴리 투구, 퓨리갑 = 퓨리어스 갑옷, 얼신무 = 얼음신 무기 */
+const CAT_KO = { weapon:'무기', armor:'갑옷', helmet:'투구', cloak:'망토' };
+const CAT_ORDER = { weapon:0, armor:1, helmet:2, cloak:3 };
+const SLOTCH = {'무기':['무'],'갑옷':['갑','의상'],'투구':['모','투'],'망토':['망']};
+const SLOTWORD = /\s*(갑옷|의상|슈트|아머|투구|모자|서클릿|헬멧|머리장식|머리띠|두건|가면|마스크|고글|복면|터번|망토|장신구|날개|무기)$/;
+const nz = s => String(s||'').replace(/\s+/g,'').toLowerCase();
+const base = s => String(s||'').replace(/^(\d차|궁극)\s*/,'').replace(/^고급\s*/,'').trim();
+let ALIAS = null;
+function buildAliases(){
+  ALIAS = [new Map(), new Map(), new Map()];   // 0 수동, 1 장비 이름, 2 용병 이름
+  const add = (t, a, code) => { a = nz(a); if (!a) return; const M = ALIAS[t]; if (!M.has(a)) M.set(a, new Set()); M.get(a).add(code); };
+  const items = state.db.items;
+  for (const [a, nm] of Object.entries(state.db.aliases || {})){
+    const n = nz(base(nm)).replace(/의/g,'');
+    for (const it of items){ const t = nz(base(it.name)).replace(/의/g,''); if (t.includes(n) || n.includes(t)) add(0, a, it.code); }
+  }
+  for (const it of items){
+    const chs = SLOTCH[CAT_KO[it.cat]] || [];
+    const mk = (st0, t) => { const st = nz(st0); if (!st) return;
+      for (const c of chs){ add(t, st.slice(0,2)+c, it.code); add(t, st[0]+st[st.length-1]+c, it.code); add(t, st+c, it.code);
+        if (st.length >= 3) add(t, st.slice(0,3)+c, it.code); } };
+    mk(base(it.name).replace(SLOTWORD,'').replace(/의$/,'').trim(), 1);
+    if (it.merc) mk(it.merc, 2);
+  }
+}
+function matches(q){
+  const nq = nz(q); if (!nq) return null;
+  if (!ALIAS) buildAliases();
+  const hit = new Set();
+  for (const M of ALIAS) if (M.has(nq)) M.get(nq).forEach(c => hit.add(c));
+  for (const it of state.db.items)
+    if (nz(it.name).includes(nq) || nz(it.merc).includes(nq) || String(it.code).includes(nq)) hit.add(it.code);
+  return hit;
+}
 function renderList(){
-  const q = $('#q').value.trim().toLowerCase();
+  const q = $('#q').value.trim();
   const ul = $('#items'); ul.textContent = '';
-  const list = state.db.items.filter(i => (q ? true : i.cat === state.cat) &&
-    (!q || i.name.toLowerCase().includes(q) || String(i.code).includes(q)));
+  const hit = matches(q);
+  let list = state.db.items.filter(i => hit ? hit.has(i.code) : i.cat === state.cat);
+  if (hit) list.sort((a, b) => (CAT_ORDER[a.cat] - CAT_ORDER[b.cat]) || (a.code - b.code));
+  $('#cats').style.opacity = hit ? .45 : 1;
   const frag = document.createDocumentFragment();
+  let lastCat = null;
   for (const it of list){
+    if (hit && it.cat !== lastCat){ const h = document.createElement('li'); h.className = 'grp'; h.textContent = CAT_KO[it.cat] || it.cat; frag.append(h); lastCat = it.cat; }
     const li = document.createElement('li'), b = document.createElement('button');
     b.setAttribute('role','option'); b.setAttribute('aria-selected', it === state.item);
     b.dataset.code = it.code;
-    b.innerHTML = `<span class="ic">${iconSrc(it) ? `<img loading="lazy" alt="" src="${iconSrc(it)}">` : ''}</span><span class="nm"></span><span class="code">${it.code}</span>`;
-    b.querySelector('.nm').textContent = it.name;
+    b.innerHTML = `<span class="ic">${iconSrc(it) ? `<img loading="lazy" alt="" src="${iconSrc(it)}">` : ''}</span><span class="nm"><span></span><small></small></span>`;
+    b.querySelector('.nm span').textContent = it.name;
+    b.querySelector('.nm small').textContent = it.merc || '';
     b.onclick = () => selectItem(it);
     li.append(b); frag.append(li);
   }
@@ -379,17 +435,18 @@ async function selectItem(it, variant = 0){
   for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
   $('#sicon').hidden = !iconSrc(it); if (iconSrc(it)) $('#sicon').src = iconSrc(it);
-  $('#scode').textContent = `${state.db.categories[it.cat] || ''} · 코드 ${it.code}`;
+  $('#scode').textContent = [state.db.categories[it.cat], it.merc].filter(Boolean).join(' · ');
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   renderVariants(); renderSlots();
   const token = ++loadToken;
   try {
     const v = it.variants[variant];
     texUsers.clear(); pulseMats.length = 0; outlineMats.length = 0;
-    const g = await buildModel(v.file, v.materials);
+    const gs = await Promise.all(partsOf(v).map(p => buildModel(p.file, p.materials)));
     if (token !== loadToken) return;
-    itemGroup.clear(); itemGroup.add(g);
+    itemGroup.clear(); gs.forEach(g => itemGroup.add(g));
     if (state.showChar) await ensureChar();
+    syncCharParts();
     $('#smsg').hidden = true;
     frame(true);
   } catch(e){ console.error(e); if (token === loadToken) $('#smsg').textContent = '모델을 불러오지 못했어요.'; }
@@ -398,7 +455,7 @@ function renderVariants(){
   const box = $('#variants'); box.textContent = '';
   const vs = state.item.variants; if (vs.length < 2) return;
   vs.forEach((v, i) => { const b = document.createElement('button'); b.className = 'tb';
-    b.textContent = `모양 ${i + 1}`; b.title = v.mesh; b.setAttribute('aria-pressed', i === state.variant);
+    b.textContent = `모양 ${i + 1}`; b.title = partsOf(v).map(p => p.mesh).join(', '); b.setAttribute('aria-pressed', i === state.variant);
     b.onclick = () => selectItem(state.item, i); box.append(b); });
 }
 
@@ -406,14 +463,21 @@ function renderVariants(){
 let charReady = null;
 function ensureChar(){
   if (!state.db.character) return Promise.resolve();
-  if (!charReady) charReady = Promise.all(state.db.character.parts.map(p =>
-      buildModel(p.file, p.materials, { skin: state.db.character.skin }))).then(gs => gs.forEach(g => charGroup.add(g)));
+  if (!charReady) charReady = Promise.all(state.db.character.parts.map(async p => {
+      const g = await buildModel(p.file, p.materials.map(m => ({ ...m, skin:true })));
+      g.userData.part = /body/.test(p.mesh) ? 'body' : /hand/.test(p.mesh) ? 'hand' : /face|head/.test(p.mesh) ? 'face' : 'etc';
+      return g; })).then(gs => gs.forEach(g => charGroup.add(g)));
   return charReady;
+}
+// 갑옷을 보고 있으면 마네킹의 몸/손은 숨기고 갑옷 몸/손으로 대신
+function syncCharParts(){
+  const roles = new Set(partsOf(state.item.variants[state.variant]).map(p => p.role));
+  for (const g of charGroup.children) g.visible = !roles.has(g.userData.part);
 }
 $('#tChar').onclick = async e => {
   if (!state.db?.character){ toast('캐릭터 모델이 아직 변환되지 않았어요.'); return; }
   state.showChar = !state.showChar; e.currentTarget.setAttribute('aria-pressed', state.showChar);
-  if (state.showChar) await ensureChar();
+  if (state.showChar){ await ensureChar(); syncCharParts(); }
   charGroup.visible = state.showChar; frame(true);
 };
 charGroup.visible = false;
@@ -467,7 +531,8 @@ function renderSlots(){
       el.querySelector('.reset').hidden = !mine();
     };
     const no = s.no || (slots.indexOf(s) + 1);
-    el.querySelector('.sname').innerHTML = `스킨 ${no}<small>${s.fx ? '이펙트' : (no === 1 ? '본체' : '')}</small>`;
+    const sub = s.fx ? '이펙트' : s.role === 'hand' ? '손' : s.role === 'body' ? '몸' : '본체';
+    el.querySelector('.sname').innerHTML = `스킨 ${no}<small>${sub}</small>`;
     el.querySelector('.fxnote').hidden = !s.fx;
     el.querySelector('.size').textContent = `${s.w} × ${s.h} px`;
     el.querySelector('.fname').textContent = s.tex.replace(/\.\w+$/, '') + (s.alpha ? ' · 투명 영역 있음' : '');
@@ -525,11 +590,11 @@ async function uvGuide(s, lineOnly){
     ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
   }
   ctx.strokeStyle = '#e0245e'; ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
-  for (const v of state.item.variants){
-    const g = (await loadGLB(v.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+  for (const v of state.item.variants) for (const p of partsOf(v)){
+    const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
     for (const o of meshes){
       const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
-      if (v.materials[idx]?.tex !== s.tex) continue;
+      if (p.materials[idx]?.tex !== s.tex) continue;
       const uv = o.geometry.attributes.uv, ix = o.geometry.index; if (!uv || !ix) continue;
       ctx.beginPath();
       for (let i = 0; i < ix.count; i += 3){
@@ -545,6 +610,7 @@ async function uvGuide(s, lineOnly){
 }
 
 /* ───────── 도우미 ───────── */
+const partsOf = v => v.parts || [{ role:'equip', mesh:v.mesh, file:v.file, materials:v.materials }];
 // 아이콘은 수치 사전(skill_dictionary.html)과 같은 방식: items.json 안에 base64(webp)로 들어 있음
 function iconSrc(it){
   const b = it.icon && state.db.icons?.[it.icon]; if (!b) return '';
