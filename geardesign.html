@@ -405,7 +405,8 @@ function matches(q){
   const nq = nz(q); if (!nq) return null;
   if (!ALIAS) buildAliases();
   const hit = new Set();
-  for (const M of ALIAS) if (M.has(nq)) M.get(nq).forEach(c => hit.add(c));
+  // 수치 사전과 같은 우선순위: 수동 단축어 → 장비 이름 규칙 → 용병 이름 규칙 중 먼저 걸리는 것 하나만
+  for (const M of ALIAS) if (M.has(nq)){ M.get(nq).forEach(c => hit.add(c)); break; }
   for (const it of state.db.items)
     if (nz(it.name).includes(nq) || nz(it.merc).includes(nq) || String(it.code).includes(nq)) hit.add(it.code);
   return hit;
