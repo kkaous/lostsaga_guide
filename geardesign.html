@@ -321,8 +321,10 @@ async function buildModel(file, mats){
       const isSkin = !!info.skin;
       mat = new THREE.MeshToonMaterial({ map: isSkin ? skinTexture(orig, SKIN()) : map, gradientMap:toonRamp,
         color: isSkin && !orig ? new THREE.Color(...SKIN()) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
-      if (!isSkin && (info.cutout || (info.alpha && info.blend !== 'alpha'))) mat.alphaTest = 0.5;
+      // 게임은 alpha_test 가 있는 재질만 투명 부분을 잘라냄 (텍스처에 알파가 있어도 보통은 불투명)
+      if (!isSkin && info.cutout && info.blend !== 'alpha') mat.alphaTest = 0.5;
       if (info.blend === 'alpha'){ mat.transparent = true; mat.depthWrite = false; }
+      if (info.blend === 'mul'){ mat.transparent = true; mat.depthWrite = false; mat.blending = THREE.MultiplyBlending; mat.premultipliedAlpha = true; }
       if (info.outline) addOutline(o, info);
     }
     if (!info.skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
