@@ -213,6 +213,7 @@ a{color:inherit}
         <button class="btn primary up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 20h16"/></svg>내 스킨 JPG 올리기</button>
         <button class="btn dlTex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>원본 텍스처</button>
         <button class="btn dlUv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>UV 가이드</button>
+        <button class="btn dlLine" style="grid-column:1/-1" title="배경 없이 UV 선만 있는 PNG — 그림 프로그램에서 맨 위 레이어로 쓰기 좋아요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>UV 선만 받기 (투명 배경 PNG)</button>
         <button class="btn reset" hidden style="grid-column:1/-1">원본으로 되돌리기</button>
       </div>
     </div>
@@ -481,7 +482,8 @@ function renderSlots(){
     for (const ev of ['dragleave','drop']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragging'); });
     drop.addEventListener('drop', e => handle(e.dataTransfer.files[0]));
     el.querySelector('.dlTex').onclick = () => download(DATA + s.file, `${s.tex.replace(/\.\w+$/, '')}_원본.png`);
-    el.querySelector('.dlUv').onclick = () => uvGuide(s);
+    el.querySelector('.dlUv').onclick = () => uvGuide(s, false);
+    el.querySelector('.dlLine').onclick = () => uvGuide(s, true);
     el.querySelector('.reset').onclick = () => { const c = mine(); if (c){ URL.revokeObjectURL(c.url); delete state.custom[s.tex]; }
       const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = u.orig; m.needsUpdate = true; } refresh(); showErr(''); };
     refresh(); box.append(el);
@@ -507,12 +509,14 @@ async function applySkin(s, bmp){
   const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = tex; m.needsUpdate = true; }
 }
 
-// UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG
-async function uvGuide(s){
+// UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG / lineOnly 면 투명 배경에 선만
+async function uvGuide(s, lineOnly){
   const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,s.w,s.h);
-  ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
+  if (!lineOnly){
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,s.w,s.h);
+    ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
+  }
   ctx.strokeStyle = '#e0245e'; ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
   for (const v of state.item.variants){
     const g = (await loadGLB(v.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
@@ -530,7 +534,7 @@ async function uvGuide(s){
       ctx.stroke();
     }
   }
-  download(cv.toDataURL('image/png'), `${s.tex.replace(/\.\w+$/, '')}_UV가이드.png`);
+  download(cv.toDataURL('image/png'), `${s.tex.replace(/\.\w+$/, '')}_${lineOnly ? 'UV선' : 'UV가이드'}.png`);
 }
 
 /* ───────── 도우미 ───────── */
