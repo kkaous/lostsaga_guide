@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>장비 스킨 제작</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --panel-2:#e3e8ee; --ink:#18212b; --muted:#56606d;
+  --line:#cdd4dc; --steel:#2f4a66; --gold:#9a6a0c; --gold-soft:#f3e3bf; --warn:#b4362b; --ok:#2f7a4a;
+  --stage:#dfe5eb;
+  --display:"Black Han Sans","Noto Sans KR",system-ui,sans-serif;
+  --body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#1a2129; --panel-2:#232c36; --ink:#e7ebf0; --muted:#9aa5b2;
+  --line:#2f3a46; --steel:#8fb2d6; --gold:#e3b24d; --gold-soft:#3a2f17; --warn:#f07a6e; --ok:#6fcf97;
+  --stage:#1d252e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#1a2129; --panel-2:#232c36; --ink:#e7ebf0; --muted:#9aa5b2;
+  --line:#2f3a46; --steel:#8fb2d6; --gold:#e3b24d; --gold-soft:#3a2f17; --warn:#f07a6e; --ok:#6fcf97;
+  --stage:#1d252e; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+a{color:inherit}
+
+/* 사이트 공용 메뉴 */
+.sitenav{border-bottom:1px solid var(--line);background:var(--panel)}
+.sitenav-in{margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;min-height:52px}
+.sitenav-brand{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:17px;color:var(--ink);text-decoration:none;letter-spacing:.3px;margin-right:auto;padding:12px 0}
+.sitenav-brand b{color:var(--gold);font-weight:400}
+.sitenav-links{display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:0;list-style:none}
+.sitenav-links a{display:block;padding:7px 12px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap}
+.sitenav-links a:hover{color:var(--ink);background:color-mix(in srgb,var(--line) 45%,transparent)}
+.sitenav-links a[aria-current=page]{color:var(--panel);background:var(--steel);font-weight:700}
+@media (max-width:520px){.sitenav-brand{margin-right:0;width:100%;padding:12px 0 2px}.sitenav-links{padding-bottom:10px}.sitenav-links a{padding:6px 9px;font-size:12.5px}}
+
+/* 머리말 */
+.head{max-width:1400px;margin:0 auto;padding:20px 16px 8px}
+.head h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;letter-spacing:.5px}
+.head h1 b{color:var(--gold);font-weight:400}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.steps li{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 6px;font-size:13px;color:var(--muted)}
+.steps li span{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--steel);color:var(--panel);font-weight:700;font-size:12px}
+
+/* 3단 레이아웃 */
+.app{max-width:1400px;margin:0 auto;padding:12px 16px 40px;display:grid;grid-template-columns:270px minmax(0,1fr) 330px;gap:14px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px 0}
+.card-h h2{font-size:14px;margin:0;font-weight:700}
+.muted{color:var(--muted)}
+
+/* 장비 목록 */
+.list{position:sticky;top:12px;display:flex;flex-direction:column;max-height:calc(100vh - 24px)}
+.cats{display:flex;gap:4px;padding:10px 12px 0;flex-wrap:wrap}
+.cats button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+.cats button[aria-pressed=true]{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700}
+.search{margin:10px 12px 8px;position:relative}
+.search input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 12px 9px 34px;outline:none}
+.search input:focus{border-color:var(--steel)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+.items{list-style:none;margin:0;padding:0 6px 8px;overflow:auto;flex:1;min-height:120px}
+.items button{display:flex;align-items:baseline;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer}
+.items button:hover{background:var(--panel-2)}
+.items button[aria-selected=true]{background:var(--gold-soft);font-weight:700}
+.items .code{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.count{font-size:12px;color:var(--muted);padding:0 14px 10px}
+
+/* 뷰어 */
+.viewer{overflow:hidden}
+.stage{position:relative;aspect-ratio:4/3.2;background:var(--stage);border-radius:12px 12px 0 0;touch-action:none}
+.stage canvas{display:block;width:100%;height:100%;border-radius:12px 12px 0 0;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.stage-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
+.stage-title{position:absolute;left:14px;top:12px;pointer-events:none}
+.stage-title b{display:block;font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.3px}
+.stage-title span{font-size:12px;color:var(--muted)}
+.hint{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--panel) 70%,transparent);padding:2px 8px;border-radius:6px}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid var(--line);align-items:center}
+.tb{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;white-space:nowrap}
+.tb:hover{border-color:var(--steel)}
+.tb[aria-pressed=true]{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700}
+.tb svg{width:15px;height:15px}
+.tb-sep{flex:1}
+.variants{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
+.variants:empty{display:none}
+
+/* 스킨 패널 */
+.skin{position:sticky;top:12px}
+.skin-body{padding:10px 14px 14px;display:flex;flex-direction:column;gap:12px}
+.slot{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.drop{position:relative;display:block;aspect-ratio:1;background:repeating-conic-gradient(var(--panel-2) 0 25%,var(--panel) 0 50%) 0 0/16px 16px;cursor:pointer}
+.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:auto}
+.drop .over{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--steel) 80%,transparent);color:#fff;font-weight:700;opacity:0;transition:opacity .15s;text-align:center;padding:12px}
+.drop:hover .over,.drop.dragging .over{opacity:1}
+.slot-info{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.slot-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;background:var(--panel-2);font-variant-numeric:tabular-nums}
+.badge.size{background:var(--gold-soft);color:var(--gold)}
+.badge.mine{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.fname{font-size:12px;color:var(--muted);word-break:break-all}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 6px;font-size:12.5px;cursor:pointer;text-align:center}
+.btn:hover{border-color:var(--steel)}
+.btn.primary{grid-column:1/-1;background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700;font-size:13.5px;padding:10px}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn svg{width:14px;height:14px;flex:none}
+.err{display:flex;gap:8px;align-items:flex-start;background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);color:var(--warn);border-radius:8px;padding:9px 10px;font-size:12.5px;font-weight:500}
+.err svg{width:16px;height:16px;flex:none;margin-top:2px}
+.rules{font-size:12px;color:var(--muted);margin:0;padding-left:18px}
+.rules b{color:var(--ink)}
+.empty{padding:22px 14px;color:var(--muted);text-align:center}
+
+/* 반응형 */
+@media (max-width:1100px){
+  .app{grid-template-columns:240px minmax(0,1fr)}
+  .skin{grid-column:1/-1;position:static}
+  .skin-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .list{position:static;max-height:none}
+  .items{max-height:230px}
+  .viewer{order:-1}
+  .stage{aspect-ratio:1/1}
+  .head h1{font-size:23px}
+  .hint{display:none}
+}
+</style>
+</head>
+<body>
+<nav class="sitenav" aria-label="사이트 메뉴" data-noexport><div class="sitenav-in" style="max-width:1400px"><a class="sitenav-brand" href="index.html">LOSTSAGA <b>공략</b></a><ul class="sitenav-links"><li><a href="index.html">용병 / 장비 라인업</a></li><li><a href="skill_dictionary.html">장비·기술 수치 사전</a></li><li><a href="pet_medal.html">펫 / 메달</a></li><li><a href="geardesign.html" aria-current=page>장비 스킨 제작</a></li></ul></div></nav>
+
+<header class="head">
+  <h1>장비 스킨 <b>제작</b></h1>
+  <ol class="steps">
+    <li><span>1</span>장비 고르기</li>
+    <li><span>2</span>원본 텍스처 · UV 가이드 받아서 그리기</li>
+    <li><span>3</span>JPG 올려서 3D로 확인</li>
+  </ol>
+</header>
+
+<main class="app">
+  <!-- 장비 목록 -->
+  <section class="card list" aria-label="장비 목록">
+    <div class="card-h"><h2>장비 선택</h2></div>
+    <div class="cats" id="cats" role="group" aria-label="분류"></div>
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="이름 또는 코드 검색" autocomplete="off" aria-label="장비 검색">
+    </label>
+    <ul class="items" id="items" role="listbox" aria-label="장비"></ul>
+    <div class="count" id="count"></div>
+  </section>
+
+  <!-- 3D 뷰어 -->
+  <section class="card viewer" aria-label="3D 미리보기">
+    <div class="stage" id="stage">
+      <div class="stage-title" id="stitle" hidden><b id="sname"></b><span id="scode"></span></div>
+      <div class="stage-msg" id="smsg">장비 목록을 불러오는 중…</div>
+      <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
+    </div>
+    <div class="toolbar">
+      <button class="tb" id="tChar" aria-pressed="false" title="캐릭터가 들고 있는 모습으로 보기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><path d="M5 11h14M12 8v7m0 0-4 6m4-6 4 6"/></svg>캐릭터 착용</button>
+      <button class="tb" id="tSpin" aria-pressed="true" title="자동 회전">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>자동 회전</button>
+      <button class="tb" id="tOutline" aria-pressed="true" title="게임처럼 외곽선 표시">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>외곽선</button>
+      <button class="tb" id="tFx" aria-pressed="true" title="빛나는 효과(이펙트) 표시">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>이펙트</button>
+      <button class="tb" id="tWire" aria-pressed="false" title="폴리곤 선 보기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>와이어</button>
+      <span class="tb-sep"></span>
+      <button class="tb" id="tReset" title="시점 초기화">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>초기화</button>
+      <button class="tb" id="tShot" title="현재 화면을 PNG로 저장">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>스크린샷</button>
+    </div>
+    <div class="variants" id="variants"></div>
+  </section>
+
+  <!-- 스킨 패널 -->
+  <section class="card skin" aria-label="스킨">
+    <div class="card-h"><h2>스킨 텍스처</h2><span class="muted" id="slotCount" style="font-size:12px"></span></div>
+    <div class="skin-body" id="slots"><div class="empty">장비를 고르면 여기에 텍스처가 나와요.</div></div>
+  </section>
+</main>
+
+<template id="slotTpl">
+  <div class="slot">
+    <label class="drop">
+      <img alt="">
+      <span class="over">JPG를 끌어다 놓거나<br>눌러서 고르기</span>
+      <input type="file" accept=".jpg,.jpeg,image/jpeg" hidden>
+    </label>
+    <div class="slot-info">
+      <div class="slot-row"><span class="badge size"></span><span class="badge state"></span></div>
+      <div class="fname"></div>
+      <div class="err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span></span></div>
+      <div class="btns">
+        <button class="btn primary up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 20h16"/></svg>내 스킨 JPG 올리기</button>
+        <button class="btn dlTex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>원본 텍스처</button>
+        <button class="btn dlUv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>UV 가이드</button>
+        <button class="btn reset" hidden style="grid-column:1/-1">원본으로 되돌리기</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const DATA = 'geardesign_data/';
+const $ = s => document.querySelector(s);
+const state = { db:null, cat:null, item:null, variant:0, showChar:false, outline:true, wire:false, fx:true,
+                custom:{} /* tex → {url, texture, w, h} — 장비를 바꿔도 유지 */ };
+
+/* ───────── 3D 기본 ───────── */
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 1.6;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.15));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1, 2, 1.5); camera.add(sun); scene.add(camera);
+const root = new THREE.Group(); scene.add(root);
+const itemGroup = new THREE.Group(), charGroup = new THREE.Group();
+root.add(itemGroup, charGroup);
+
+// 3단 툰 그라데이션
+const toonRamp = (() => { const d = new Uint8Array([110,110,110,255, 190,190,190,255, 255,255,255,255]);
+  const t = new THREE.DataTexture(d, 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+
+// 배경을 캔버스에 직접 칠해야 빛 효과(가산 혼합)가 제대로 보임
+function syncBg(){ renderer.setClearColor(new THREE.Color(getComputedStyle(stage).backgroundColor), 1); }
+syncBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncBg);
+function resize(){ const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const t = clock.getElapsedTime();
+  for (const m of pulseMats) m.opacity = 0.65 + 0.35 * Math.sin(t * 3);
+  controls.update(); renderer.render(scene, camera);
+});
+
+/* ───────── 데이터 ───────── */
+const gltf = new GLTFLoader(), texLoader = new THREE.TextureLoader();
+const meshCache = new Map(), texCache = new Map();
+const loadGLB = f => { if (!meshCache.has(f)) meshCache.set(f, gltf.loadAsync(DATA + f)); return meshCache.get(f); };
+function prepTex(t){ t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; }
+const loadTex = f => { if (!texCache.has(f)) texCache.set(f, texLoader.loadAsync(DATA + f).then(prepTex)); return texCache.get(f); };
+
+const pulseMats = [];
+const texUsers = new Map(); // tex 이름 → 그 텍스처를 쓰는 재질들 (스킨 교체용)
+
+async function buildModel(file, mats, { skin } = {}){
+  const g = (await loadGLB(file)).scene.clone(true);
+  const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+  for (const o of meshes){
+    const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
+    const info = mats[idx] || {};
+    let mat;
+    const orig = info.texFile ? await loadTex(info.texFile).catch(() => null) : null;
+    const map = (info.tex && state.custom[info.tex]?.texture) || orig;
+    if (info.blend === 'add'){
+      const e = info.emissive || [1,1,1];
+      mat = new THREE.MeshBasicMaterial({ map, color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
+        blending:THREE.AdditiveBlending, transparent:true, depthWrite:false, side:THREE.DoubleSide });
+      pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
+    } else {
+      mat = new THREE.MeshToonMaterial({ map: skin ? null : map, gradientMap:toonRamp,
+        color: skin ? new THREE.Color(...skin) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (!skin && (info.cutout || (info.alpha && info.blend !== 'alpha'))) mat.alphaTest = 0.5;
+      if (info.blend === 'alpha'){ mat.transparent = true; mat.depthWrite = false; }
+      if (!skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
+      if (info.outline) addOutline(o, info);
+    }
+    mat.wireframe = state.wire;
+    o.material = mat;
+  }
+  return g;
+}
+
+// 게임식 외곽선: 뒷면을 법선 방향으로 부풀려 그리기
+const outlineMats = [];
+function addOutline(mesh, info){
+  const w = (info.outlineWidth || 1) * 0.32;
+  const mat = new THREE.ShaderMaterial({
+    uniforms:{ c:{ value:new THREE.Color(...info.outline) }, w:{ value:w } },
+    vertexShader:'uniform float w; void main(){ vec3 p = position + normal * w; gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.); }',
+    fragmentShader:'uniform vec3 c; void main(){ gl_FragColor = vec4(c,1.); }',
+    side:THREE.BackSide });
+  const ol = new THREE.Mesh(mesh.geometry, mat); ol.visible = state.outline; ol.userData.outline = true;
+  outlineMats.push(ol); mesh.add(ol);
+}
+
+/* ───────── 목록 UI ───────── */
+async function init(){
+  try {
+    const r = await fetch(DATA + 'items.json', { cache:'no-cache' });
+    if (!r.ok) throw new Error(r.status);
+    state.db = await r.json();
+  } catch(e){
+    $('#smsg').innerHTML = location.protocol === 'file:'
+      ? '파일을 더블클릭해서 열면 데이터를 못 불러와요.<br>GitHub Pages 주소로 열어 주세요.'
+      : '장비 데이터를 불러오지 못했어요.<br><small>geardesign_data 폴더가 같이 올라갔는지 확인해 주세요.</small>';
+    return;
+  }
+  const cats = [...new Set(state.db.items.map(i => i.cat))];
+  const catBox = $('#cats');
+  for (const c of cats){
+    const b = document.createElement('button'); b.textContent = state.db.categories[c] || c; b.dataset.cat = c;
+    b.onclick = () => { state.cat = c; renderCats(); renderList(); };
+    catBox.append(b);
+  }
+  if (cats.length < 2) catBox.hidden = true;
+  const want = parseInt(location.hash.slice(1));
+  const first = state.db.items.find(i => i.code === want) || state.db.items[0];
+  state.cat = first?.cat ?? cats[0];
+  renderCats(); renderList();
+  if (first) selectItem(first); else $('#smsg').textContent = '변환된 장비가 없어요.';
+}
+function renderCats(){ for (const b of $('#cats').children) b.setAttribute('aria-pressed', b.dataset.cat === state.cat); }
+function renderList(){
+  const q = $('#q').value.trim().toLowerCase();
+  const ul = $('#items'); ul.textContent = '';
+  const list = state.db.items.filter(i => (q ? true : i.cat === state.cat) &&
+    (!q || i.name.toLowerCase().includes(q) || String(i.code).includes(q)));
+  const frag = document.createDocumentFragment();
+  for (const it of list){
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.setAttribute('role','option'); b.setAttribute('aria-selected', it === state.item);
+    b.innerHTML = `<span></span><span class="code">${it.code}</span>`; b.firstChild.textContent = it.name;
+    b.onclick = () => selectItem(it);
+    li.append(b); frag.append(li);
+  }
+  ul.append(frag);
+  $('#count').textContent = list.length ? `${list.length}개` : '검색 결과가 없어요';
+}
+$('#q').addEventListener('input', renderList);
+
+/* ───────── 장비 선택 ───────── */
+let loadToken = 0;
+async function selectItem(it, variant = 0){
+  state.item = it; state.variant = variant;
+  history.replaceState(null, '', '#' + it.code);
+  for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.lastChild.textContent == it.code);
+  $('#stitle').hidden = false; $('#sname').textContent = it.name;
+  $('#scode').textContent = `${state.db.categories[it.cat] || ''} · 코드 ${it.code}`;
+  $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
+  renderVariants(); renderSlots();
+  const token = ++loadToken;
+  try {
+    const v = it.variants[variant];
+    texUsers.clear(); pulseMats.length = 0; outlineMats.length = 0;
+    const g = await buildModel(v.file, v.materials);
+    if (token !== loadToken) return;
+    itemGroup.clear(); itemGroup.add(g);
+    if (state.showChar) await ensureChar();
+    $('#smsg').hidden = true;
+    frame(true);
+  } catch(e){ console.error(e); if (token === loadToken) $('#smsg').textContent = '모델을 불러오지 못했어요.'; }
+}
+function renderVariants(){
+  const box = $('#variants'); box.textContent = '';
+  const vs = state.item.variants; if (vs.length < 2) return;
+  vs.forEach((v, i) => { const b = document.createElement('button'); b.className = 'tb';
+    b.textContent = `모양 ${i + 1}`; b.title = v.mesh; b.setAttribute('aria-pressed', i === state.variant);
+    b.onclick = () => selectItem(state.item, i); box.append(b); });
+}
+
+/* ───────── 캐릭터 ───────── */
+let charReady = null;
+function ensureChar(){
+  if (!state.db.character) return Promise.resolve();
+  if (!charReady) charReady = Promise.all(state.db.character.parts.map(p =>
+      buildModel(p.file, p.materials, { skin: state.db.character.skin }))).then(gs => gs.forEach(g => charGroup.add(g)));
+  return charReady;
+}
+$('#tChar').onclick = async e => {
+  if (!state.db?.character){ toast('캐릭터 모델이 아직 변환되지 않았어요.'); return; }
+  state.showChar = !state.showChar; e.currentTarget.setAttribute('aria-pressed', state.showChar);
+  if (state.showChar) await ensureChar();
+  charGroup.visible = state.showChar; frame(true);
+};
+charGroup.visible = false;
+
+/* ───────── 카메라 맞추기 ───────── */
+function frame(reset){
+  root.position.set(0,0,0); root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(state.showChar ? root : itemGroup);
+  if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  root.position.copy(c).negate();
+  const r = Math.max(s.x, s.y, s.z) * 0.62 || 50;
+  if (reset){
+    const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 0.95;
+    // 캐릭터: 정면 사선 / 장비만: 가장 얇은 축 방향(넓은 면)에서 보기
+    let dir = new THREE.Vector3(0.55, 0.25, 0.8);
+    if (!state.showChar){
+      const ax = s.x <= s.y && s.x <= s.z ? 'x' : (s.y <= s.z ? 'y' : 'z');
+      dir = new THREE.Vector3(0.25, 0.2, 0.25); dir[ax] = 1;
+      if (ax === 'y') dir.set(0.25, 1, 0.45);
+    }
+    camera.position.copy(dir.normalize().multiplyScalar(d)); camera.near = d / 100; camera.far = d * 20; camera.updateProjectionMatrix();
+    controls.target.set(0,0,0); controls.minDistance = r * 0.3; controls.maxDistance = d * 4;
+  }
+}
+
+/* ───────── 툴바 ───────── */
+function toggle(id, key, fn){ $(id).onclick = e => { state[key] = !state[key]; e.currentTarget.setAttribute('aria-pressed', state[key]); fn(state[key]); }; }
+state.spin = true;
+toggle('#tSpin', 'spin', v => controls.autoRotate = v);
+toggle('#tOutline', 'outline', v => root.traverse(o => { if (o.userData.outline) o.visible = v; }));
+toggle('#tFx', 'fx', v => root.traverse(o => { if (o.userData.fx) o.visible = v; }));
+toggle('#tWire', 'wire', v => root.traverse(o => { if (o.isMesh && !o.userData.outline) o.material.wireframe = v; }));
+$('#tReset').onclick = () => frame(true);
+$('#tShot').onclick = () => download(renderer.domElement.toDataURL('image/png'), `${state.item?.name || 'gear'}_미리보기.png`);
+
+/* ───────── 스킨 슬롯 ───────── */
+function renderSlots(){
+  const box = $('#slots'); box.textContent = '';
+  const slots = state.item.slots;
+  $('#slotCount').textContent = slots.length ? `${slots.length}장` : '';
+  if (!slots.length){ box.innerHTML = '<div class="empty">이 장비는 바꿀 수 있는 텍스처가 없어요.</div>'; return; }
+  for (const s of slots){
+    const el = $('#slotTpl').content.firstElementChild.cloneNode(true);
+    const img = el.querySelector('img'), file = el.querySelector('input'), drop = el.querySelector('.drop');
+    const err = el.querySelector('.err'), mine = () => state.custom[s.tex];
+    const refresh = () => {
+      img.src = mine()?.url || DATA + s.file;
+      const st = el.querySelector('.state');
+      st.textContent = mine() ? '내 스킨 적용 중' : '원본'; st.classList.toggle('mine', !!mine());
+      el.querySelector('.reset').hidden = !mine();
+    };
+    el.querySelector('.size').textContent = `${s.w} × ${s.h} px`;
+    el.querySelector('.fname').textContent = s.tex.replace(/\.\w+$/, '') + (s.alpha ? ' · 투명 영역 있음' : '');
+    const showErr = msg => { err.hidden = !msg; err.querySelector('span').textContent = msg || ''; };
+    const handle = async f => {
+      showErr('');
+      if (!f) return;
+      if (!/\.(jpe?g)$/i.test(f.name) && f.type !== 'image/jpeg'){ showErr(`JPG 파일만 올릴 수 있어요. (올린 파일: ${f.name})`); return; }
+      let bmp; try { bmp = await createImageBitmap(f); } catch { showErr('이미지를 읽지 못했어요. 다른 JPG로 다시 올려 주세요.'); return; }
+      if (bmp.width !== s.w || bmp.height !== s.h){
+        showErr(`크기가 맞지 않아요. 이 장비는 ${s.w}×${s.h}px 이어야 하는데, 올린 이미지는 ${bmp.width}×${bmp.height}px 이에요. 크기를 맞춰서 다시 올려 주세요.`);
+        return;
+      }
+      await applySkin(s, bmp); refresh();
+    };
+    file.onchange = () => { handle(file.files[0]); file.value = ''; };
+    el.querySelector('.up').onclick = () => file.click();
+    for (const ev of ['dragenter','dragover']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragging'); });
+    for (const ev of ['dragleave','drop']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragging'); });
+    drop.addEventListener('drop', e => handle(e.dataTransfer.files[0]));
+    el.querySelector('.dlTex').onclick = () => download(DATA + s.file, `${s.tex.replace(/\.\w+$/, '')}_원본.png`);
+    el.querySelector('.dlUv').onclick = () => uvGuide(s);
+    el.querySelector('.reset').onclick = () => { const c = mine(); if (c){ URL.revokeObjectURL(c.url); delete state.custom[s.tex]; }
+      const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = u.orig; m.needsUpdate = true; } refresh(); showErr(''); };
+    refresh(); box.append(el);
+  }
+}
+
+// 올린 JPG를 모델에 입히기 (원본에 투명 영역이 있으면 그 모양은 그대로 유지)
+async function applySkin(s, bmp){
+  const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h;
+  const ctx = cv.getContext('2d'); ctx.drawImage(bmp, 0, 0);
+  if (s.alpha){
+    const o = await loadImage(DATA + s.file);
+    const oc = document.createElement('canvas'); oc.width = s.w; oc.height = s.h;
+    const octx = oc.getContext('2d'); octx.drawImage(o, 0, 0);
+    const a = octx.getImageData(0,0,s.w,s.h).data, d = ctx.getImageData(0,0,s.w,s.h);
+    for (let i = 3; i < a.length; i += 4) d.data[i] = a[i];
+    ctx.putImageData(d, 0, 0);
+  }
+  const old = state.custom[s.tex]; if (old) URL.revokeObjectURL(old.url);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  const tex = prepTex(new THREE.CanvasTexture(cv));
+  state.custom[s.tex] = { url: URL.createObjectURL(blob), texture: tex };
+  const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = tex; m.needsUpdate = true; }
+}
+
+// UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG
+async function uvGuide(s){
+  const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,s.w,s.h);
+  ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#e0245e'; ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
+  for (const v of state.item.variants){
+    const g = (await loadGLB(v.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+    for (const o of meshes){
+      const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
+      if (v.materials[idx]?.tex !== s.tex) continue;
+      const uv = o.geometry.attributes.uv, ix = o.geometry.index; if (!uv || !ix) continue;
+      ctx.beginPath();
+      for (let i = 0; i < ix.count; i += 3){
+        for (let k = 0; k <= 3; k++){
+          const n = ix.getX(i + (k % 3)), x = uv.getX(n) * s.w, y = uv.getY(n) * s.h;
+          k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+  }
+  download(cv.toDataURL('image/png'), `${s.tex.replace(/\.\w+$/, '')}_UV가이드.png`);
+}
+
+/* ───────── 도우미 ───────── */
+function loadImage(src){ return new Promise((ok, no) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = no; i.src = src; }); }
+function download(href, name){ const a = document.createElement('a'); a.href = href; a.download = name; document.body.append(a); a.click(); a.remove(); }
+function toast(msg){ const m = $('#smsg'); m.hidden = false; m.textContent = msg; setTimeout(() => { if (state.item) m.hidden = true; }, 2200); }
+
+init();
+</script>
+</body>
+</html>
