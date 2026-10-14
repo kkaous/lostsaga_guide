@@ -106,15 +106,12 @@ a{color:inherit}
 .skin{position:sticky;top:12px}
 .skin-body{padding:10px 14px 14px;display:flex;flex-direction:column;gap:12px}
 .slot{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.drop{position:relative;display:block;aspect-ratio:1;background:repeating-conic-gradient(var(--panel-2) 0 25%,var(--panel) 0 50%) 0 0/16px 16px;cursor:pointer}
+.drop{position:relative;display:block;aspect-ratio:1;background:repeating-conic-gradient(var(--panel-2) 0 25%,var(--panel) 0 50%) 0 0/16px 16px;cursor:default;touch-action:manipulation}
 .drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:auto}
 .drop canvas.uv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 /* 마우스를 올려도 텍스처·UV 선이 가려지지 않게 아래 띠로만 안내 (끌어다 놓을 때만 전체 덮기) */
-.drop .over{position:absolute;left:0;right:0;bottom:0;display:grid;place-items:center;background:color-mix(in srgb,var(--steel) 85%,transparent);color:#fff;font-weight:700;font-size:12.5px;opacity:0;transition:opacity .15s;text-align:center;padding:7px 10px}
-.drop .over br{display:none}
-.drop:hover .over{opacity:1}
-.drop.dragging .over{opacity:1;top:0;font-size:14px}
-.drop.dragging .over br{display:inline}
+.drop .over{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--steel) 85%,transparent);color:#fff;font-weight:700;font-size:14px;opacity:0;transition:opacity .15s;text-align:center;padding:12px;pointer-events:none}
+.drop.dragging .over{opacity:1}
 .slot{transition:border-color .15s,box-shadow .15s}
 .slot.hl{border-color:var(--steel)}
 .slot.pinned{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
@@ -134,7 +131,8 @@ a{color:inherit}
 .swatches button{width:18px;height:18px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
 .swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 .swatches[aria-disabled=true]{opacity:.35;pointer-events:none}
-.tool-tip{font-size:11.5px;color:var(--muted);margin:0;line-height:1.45}
+.tool-tip{font-size:11.5px;color:var(--muted);margin:0;line-height:1.5}
+.tool-tip b{color:var(--ink);font-weight:700}
 .hl-tag{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 8px;font-size:12.5px;font-weight:700;box-shadow:0 2px 8px rgb(0 0 0/.08);pointer-events:none}
 .hl-tag i{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none}
 .hl-tag.none i{background:var(--muted)}
@@ -258,11 +256,11 @@ a{color:inherit}
 
 <template id="slotTpl">
   <div class="slot">
-    <label class="drop">
+    <div class="drop">
       <img alt="">
-      <span class="over">JPG를 끌어다 놓거나<br>눌러서 고르기</span>
+      <span class="over">JPG를 여기에 놓으면 적용돼요</span>
       <input type="file" accept=".jpg,.jpeg,image/jpeg" hidden>
-    </label>
+    </div>
     <div class="slot-info">
       <div class="slot-title"><b class="sname"></b><span class="r"><span class="badge size"></span><button class="loc" aria-pressed="false" title="3D에서 이 파츠 위치를 계속 표시"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>위치</button></span></div>
       <div class="slot-row"><span class="fname"></span><span class="badge state"></span></div>
@@ -296,7 +294,7 @@ const state = { db:null, cat:null, item:null, variant:0, showChar:false, outline
                 custom:{} /* tex → {url, texture, w, h} — 장비를 바꿔도 유지 */,
                 hl: pref('gd.hl', 'ghost'),            // 파츠 위치 표시: ghost(나머지 흐리게) / solo(그 파츠만) / off
                 uv: pref('gd.uv', '0') === '1', uvColor: pref('gd.uvc', '#e0245e'),
-                hover:null, pin:null /* 위치를 보여 줄 텍스처 이름 */ };
+                hover:null, pin:null /* 위치를 보여 줄 텍스처 이름 */, sel:null, isleHover:null /* 텍스처 위에서 고른/가리킨 UV 조각 */ };
 // 보기 설정 기억 (저장소가 막혀 있으면 기본값)
 function pref(k, d){ try { return localStorage.getItem(k) ?? d; } catch { return d; } }
 function savePref(k, v){ try { localStorage.setItem(k, v); } catch {} }
@@ -515,7 +513,7 @@ $('#q').addEventListener('input', renderList);
 /* ───────── 장비 선택 ───────── */
 let loadToken = 0;
 async function selectItem(it, variant = 0){
-  state.item = it; state.variant = variant; state.hover = state.pin = null;
+  state.item = it; state.variant = variant; state.hover = state.pin = state.sel = state.isleHover = null;
   history.replaceState(null, '', '#' + it.code);
   for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
@@ -609,44 +607,82 @@ for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
 $('#tShot').onclick = () => download(renderer.domElement.toDataURL('image/png'), `${state.item?.name || 'gear'}_미리보기.png`);
 
 /* ───────── 파츠 위치 표시 ─────────
-   스킨 칸에 마우스를 올리거나 '위치'를 눌러 고정하면, 그 텍스처를 쓰는 메시만 강조
-   ghost: 나머지를 반투명하게 + 해당 파츠를 은은하게 깜빡임 / solo: 해당 파츠만 보이기 */
-const hlMats = [];
+   ① 스킨 칸에 마우스 올리기 / '위치' 고정 → 그 텍스처를 쓰는 부분 전체
+   ② 텍스처 위 UV 도형(조각)에 마우스 올리기 / 누르기 → 그 조각에 해당하는 부분만
+   ghost: 나머지를 반투명하게 + 대상은 은은하게 깜빡임 / solo: 대상만 보이기 */
+const hlMats = [], overlays = [], subGeoCache = new Map();
 const HL_MODES = { ghost:'나머지 흐리게', solo:'그 파츠만', off:'끔' };
+// 지금 보여 줄 대상: { tex, picks: Map<geometry uuid, Set<조각 번호>> | null, kind }
+function hlTarget(){
+  if (state.isleHover) return { ...state.isleHover, kind:'hover' };
+  if (state.sel && (state.hover == null || state.hover === state.sel.tex)) return { ...state.sel, kind:'sel' };
+  const tex = state.hover ?? state.pin;
+  return tex ? { tex, picks:null, kind: state.hover ? 'slot' : 'pin' } : null;
+}
+// 고른 조각들의 삼각형만 담은 지오메트리 (원본과 버텍스 데이터 공유)
+function subGeometry(geo, ids){
+  const key = geo.uuid + ':' + [...ids].sort((a, b) => a - b).join(',');
+  if (subGeoCache.has(key)) return subGeoCache.get(key);
+  const isl = islandsByGeo.get(geo.uuid), ix = geo.index, out = [];
+  for (const id of ids) for (const t of isl[id].tris) out.push(ix.getX(t), ix.getX(t + 1), ix.getX(t + 2));
+  const g = new THREE.BufferGeometry();
+  for (const [k, a] of Object.entries(geo.attributes)) g.setAttribute(k, a);
+  g.setIndex(out); subGeoCache.set(key, g); return g;
+}
 function applyHighlight(){
-  const tex = state.hover ?? state.pin, on = !!tex && state.hl !== 'off';
+  const T = hlTarget(), on = !!T && state.hl !== 'off';
   for (const m of hlMats) m.emissive.setRGB(0, 0, 0);
   hlMats.length = 0;
+  for (const ov of overlays){ ov.removeFromParent(); ov.material.dispose(); }
+  overlays.length = 0;
   let found = 0;
   root.traverse(o => {
-    if (!o.isMesh || o.userData.outline) return;
-    const m = o.material, hit = on && o.userData.tex === tex, dim = on && !hit && state.hl === 'ghost';
-    if (hit) found++;
+    if (!o.isMesh || o.userData.outline || o.userData.overlay) return;
+    const m = o.material;
     // 먼저 원래대로
     if (m.userData.hlSave){ Object.assign(m, m.userData.hlSave); delete m.userData.hlSave; m.needsUpdate = true; }
     m.userData.dim = 1;
-    o.visible = on && state.hl === 'solo' ? hit : (hit || !o.userData.fx || state.fx);
-    for (const c of o.children) if (c.userData.outline) c.visible = state.outline && !dim;
-    if (dim){
+    const same = on && o.userData.tex === T.tex;
+    const whole = same && !T.picks;
+    const ids = same && T.picks ? T.picks.get(o.geometry.uuid) : null, part = !!ids?.size;
+    if (whole || part) found++;
+    const solo = on && state.hl === 'solo', dim = on && !whole && state.hl === 'ghost';
+    o.visible = solo ? (whole || part) : (whole || part || !o.userData.fx || state.fx);
+    for (const c of o.children) if (c.userData.outline) c.visible = state.outline && !dim && !(solo && part);
+    if (part){
+      // 고른 조각만 원래 재질로 덧그리기 (반투명 본체보다 앞에 보이도록 살짝 당김)
+      const om = m.clone(); om.polygonOffset = true; om.polygonOffsetFactor = -1; om.polygonOffsetUnits = -4;
+      if (m.userData.glow) om.opacity = 1;
+      om.wireframe = m.wireframe;
+      const ov = new THREE.Mesh(subGeometry(o.geometry, ids), om); ov.userData.overlay = true;
+      o.add(ov); overlays.push(ov);
+      if (state.hl === 'ghost' && om.emissive) hlMats.push(om);
+    }
+    if (part && solo){ m.userData.hlSave = { visible:m.visible }; m.visible = false; m.needsUpdate = true; }
+    else if (dim){
       if (m.userData.glow) m.userData.dim = 0.12;
       else { m.userData.hlSave = { transparent:m.transparent, opacity:m.opacity, depthWrite:m.depthWrite };
              m.transparent = true; m.opacity = 0.13; m.depthWrite = false; m.needsUpdate = true; }
     }
-    if (hit && state.hl === 'ghost' && m.emissive) hlMats.push(m);
+    if (whole && state.hl === 'ghost' && m.emissive) hlMats.push(m);
   });
-  // 위치 표시 중 안내 (지금 모양에 그 텍스처가 없으면 알려 줌)
+  // 3D 오른쪽 위 안내
   const tag = $('#hlTag');
   tag.hidden = !on;
   if (on){
-    const s = cur(state.item).slots.find(x => x.tex === tex);
+    const s = cur(state.item).slots.find(x => x.tex === T.tex), n = T.picks ? [...T.picks.values()].reduce((a, v) => a + v.size, 0) : 0;
     tag.classList.toggle('none', !found);
     tag.querySelector('span').textContent = !found ? `${slotLabel(s)} · 지금 모양에는 안 쓰여요`
-      : `${slotLabel(s)} 위치${state.pin === tex && state.hover == null ? ' · 고정' : ''}`;
+      : T.kind === 'hover' ? `${slotLabel(s)} · 가리킨 조각`
+      : T.kind === 'sel' ? `${slotLabel(s)} · 고른 조각${n > 1 ? ` ${n}개` : ''}`
+      : `${slotLabel(s)} 전체 위치${T.kind === 'pin' ? ' · 고정' : ''}`;
   }
   for (const el of $('#slots').querySelectorAll('.slot')){
-    el.classList.toggle('hl', on && el.dataset.tex === tex);
-    el.classList.toggle('pinned', state.pin === el.dataset.tex && state.hl !== 'off');
-    el.querySelector('.loc').setAttribute('aria-pressed', state.pin === el.dataset.tex);
+    const t = el.dataset.tex;
+    el.classList.toggle('hl', on && t === T.tex);
+    el.classList.toggle('pinned', (state.pin === t || state.sel?.tex === t) && state.hl !== 'off');
+    el.querySelector('.loc').setAttribute('aria-pressed', state.pin === t);
+    el._uv?.();
   }
 }
 function slotLabel(s){
@@ -657,32 +693,86 @@ function slotLabel(s){
 function renderHlMode(){
   for (const b of $('#hlMode').children) b.setAttribute('aria-pressed', b.dataset.m === state.hl);
   $('#slots').dataset.hl = state.hl;
-  $('#hlTip').textContent = state.hl === 'off'
-    ? '파츠 위치 표시가 꺼져 있어요.'
-    : '스킨 칸에 마우스를 올리면 왼쪽 3D에서 그 파츠 위치를 보여 줘요. ‘위치’를 누르면 계속 표시돼요.';
+  $('#hlTip').innerHTML = state.hl === 'off'
+    ? '3D 위치 표시가 꺼져 있어요. 텍스처 위 도형을 누르면 텍스처에만 표시돼요.'
+    : '<b>텍스처 위 도형</b>을 누르면 3D에서 <b>그 조각만</b> 보여요. Shift·Ctrl+클릭으로 여러 개, 빈 곳을 누르면 해제. 스킨 칸에 마우스를 올리면 그 텍스처 전체 위치를 보여 줘요.';
 }
 for (const b of $('#hlMode').children) b.onclick = () => {
   state.hl = b.dataset.m; savePref('gd.hl', state.hl); renderHlMode(); applyHighlight();
 };
 
-/* ───────── UV 선 겹쳐 보기 ───────── */
+/* ───────── UV 데이터 · 조각(섬) 나누기 ───────── */
 const UV_COLORS = [['#e0245e','분홍'], ['#ffd400','노랑'], ['#00c2d1','청록'], ['#ffffff','흰색'], ['#111111','검정']];
-const uvCache = new Map();   // 장비·성별·텍스처 → 그 텍스처를 쓰는 메시들의 {uv, index}
+const uvCache = new Map();        // 장비·성별·텍스처 → [{ geo, uv, ix, islands }]
+const islandsByGeo = new Map();   // geometry uuid → 조각 목록
 async function uvMeshes(s){
   const key = `${state.item.code}|${state.gender}|${s.tex}`;
-  if (uvCache.has(key)) return uvCache.get(key);
-  const out = [];
-  for (const v of cur(state.item).variants) for (const p of partsOf(v)){
-    const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
-    for (const o of meshes){
-      const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
-      if (p.materials[idx]?.tex !== s.tex) continue;
-      const uv = o.geometry.attributes.uv, ix = o.geometry.index; if (uv && ix) out.push({ uv, ix });
+  if (!uvCache.has(key)) uvCache.set(key, (async () => {
+    const out = [], seen = new Set();
+    for (const v of cur(state.item).variants) for (const p of partsOf(v)){
+      const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+      for (const o of meshes){
+        const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
+        if (p.materials[idx]?.tex !== s.tex) continue;
+        const geo = o.geometry, uv = geo.attributes.uv, ix = geo.index;
+        if (!uv || !ix || seen.has(geo.uuid)) continue;
+        seen.add(geo.uuid);
+        if (!islandsByGeo.has(geo.uuid)) islandsByGeo.set(geo.uuid, computeIslands(geo));
+        out.push({ geo, uv, ix, islands: islandsByGeo.get(geo.uuid) });
+      }
     }
-  }
-  uvCache.set(key, out); return out;
+    return out;
+  })());
+  return uvCache.get(key);
 }
-// UV 삼각형을 W×H 캔버스에 그리기
+// UV에서 서로 이어진 삼각형끼리 한 조각으로 묶기 (같은 위치·같은 UV 점은 하나로 봄)
+function computeIslands(geo){
+  const ix = geo.index, uv = geo.attributes.uv, pos = geo.attributes.position;
+  const weld = new Map(), vid = new Int32Array(uv.count);
+  for (let v = 0; v < uv.count; v++){
+    const k = `${Math.round(pos.getX(v)*1e3)},${Math.round(pos.getY(v)*1e3)},${Math.round(pos.getZ(v)*1e3)},${Math.round(uv.getX(v)*1e4)},${Math.round(uv.getY(v)*1e4)}`;
+    let id = weld.get(k); if (id === undefined){ id = weld.size; weld.set(k, id); } vid[v] = id;
+  }
+  const par = new Int32Array(weld.size).map((_, i) => i);
+  const find = a => { while (par[a] !== a){ par[a] = par[par[a]]; a = par[a]; } return a; };
+  const unite = (a, b) => { a = find(a); b = find(b); if (a !== b) par[a] = b; };
+  for (let t = 0; t < ix.count; t += 3){ const a = vid[ix.getX(t)]; unite(a, vid[ix.getX(t+1)]); unite(a, vid[ix.getX(t+2)]); }
+  const groups = new Map();
+  for (let t = 0; t < ix.count; t += 3){
+    const r = find(vid[ix.getX(t)]);
+    let g = groups.get(r); if (!g){ g = { tris:[], bbox:[Infinity, Infinity, -Infinity, -Infinity] }; groups.set(r, g); }
+    g.tris.push(t);
+    for (let k = 0; k < 3; k++){ const n = ix.getX(t + k), u = uv.getX(n), v = uv.getY(n);
+      const b = g.bbox; if (u < b[0]) b[0] = u; if (v < b[1]) b[1] = v; if (u > b[2]) b[2] = u; if (v > b[3]) b[3] = v; }
+  }
+  return [...groups.values()];
+}
+// (u,v) 아래에 있는 조각들 (UV가 겹치는 좌우 대칭 파츠 등은 같이 잡힘)
+function pickAt(list, u, v){
+  const picks = new Map();
+  const inTri = (e, t, x, y) => {
+    const a = e.ix.getX(t), b = e.ix.getX(t+1), c = e.ix.getX(t+2);
+    const ax = e.uv.getX(a), ay = e.uv.getY(a), bx = e.uv.getX(b), by = e.uv.getY(b), cx = e.uv.getX(c), cy = e.uv.getY(c);
+    const d1 = (x-bx)*(ay-by) - (ax-bx)*(y-by), d2 = (x-cx)*(by-cy) - (bx-cx)*(y-cy), d3 = (x-ax)*(cy-ay) - (cx-ax)*(y-ay);
+    return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+  };
+  // 텍스처 반복(0~1 밖 UV)도 잡히도록 한 칸씩 옮겨서도 확인
+  for (const [ou, ov] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){
+    const x = u + ou, y = v + ov;
+    for (const e of list) e.islands.forEach((isl, id) => {
+      const b = isl.bbox; if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) return;
+      for (const t of isl.tris) if (inTri(e, t, x, y)){
+        if (!picks.has(e.geo.uuid)) picks.set(e.geo.uuid, new Set());
+        picks.get(e.geo.uuid).add(id); break;
+      }
+    });
+    if (picks.size) break;
+  }
+  return picks.size ? picks : null;
+}
+const sig = p => p ? [...p].map(([g, s]) => g + ':' + [...s].sort((a, b) => a - b).join('.')).join('|') : '';
+
+/* ───────── 텍스처 위 그리기: UV 선 + 고른/가리킨 조각 ───────── */
 function strokeUV(ctx, list, W, H){
   ctx.beginPath();
   for (const { uv, ix } of list)
@@ -693,20 +783,52 @@ function strokeUV(ctx, list, W, H){
       }
   ctx.stroke();
 }
-// 스킨 칸 위에 겹치는 UV 선: 화면 크기에 맞춘 해상도로 그려서 선이 또렷하게
+function pathIslands(ctx, list, picks, W, H){
+  ctx.beginPath();
+  for (const e of list){
+    const ids = picks.get(e.geo.uuid); if (!ids) continue;
+    for (const id of ids) for (const t of e.islands[id].tris)
+      for (let k = 0; k < 3; k++){
+        const n = e.ix.getX(t + k), x = e.uv.getX(n) * W, y = e.uv.getY(n) * H;
+        k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        if (k === 2) ctx.closePath();
+      }
+  }
+}
+// 화면 크기에 맞춘 해상도로 그려서 선이 또렷하게
 async function drawUvOverlay(s, cv){
-  if (!state.uv){ cv.hidden = true; return; }
+  const hov = state.isleHover?.tex === s.tex ? state.isleHover.picks : null;
+  const sel = state.sel?.tex === s.tex ? state.sel.picks : null;
   const box = cv.parentElement.getBoundingClientRect().width || 300;
   const px = Math.round(box * Math.min(devicePixelRatio || 1, 2));
-  const k = px / Math.max(s.w, s.h), W = Math.round(s.w * k), H = Math.round(s.h * k);
+  const key = [state.uv, state.uvColor, px, sig(hov), sig(sel)].join('#');
+  if (cv._key === key) return; cv._key = key;
+  if (!state.uv && !hov && !sel){ cv.hidden = true; return; }
   const list = await uvMeshes(s);
+  if (cv._key !== key) return;   // 그사이 바뀌었으면 버림
+  const k = px / Math.max(s.w, s.h), W = Math.round(s.w * k), H = Math.round(s.h * k);
   cv.width = W; cv.height = H; cv.hidden = false;
   const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, W, H);
-  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, px / 320);
-  // 어떤 텍스처 위에서도 보이도록 얇은 그림자 선을 먼저
-  ctx.strokeStyle = state.uvColor === '#111111' ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.45)';
-  ctx.lineWidth += 1.2; strokeUV(ctx, list, W, H);
-  ctx.strokeStyle = state.uvColor; ctx.lineWidth -= 1.2; strokeUV(ctx, list, W, H);
+  ctx.lineJoin = 'round';
+  const lw = Math.max(1, px / 320);
+  if (sel){
+    // 고른 조각 말고는 어둡게 → 어디를 골랐는지 한눈에
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'destination-out'; pathIslands(ctx, list, sel, W, H); ctx.fill(); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (state.uv){
+    ctx.strokeStyle = state.uvColor === '#111111' ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.45)';
+    ctx.lineWidth = lw + 1.2; strokeUV(ctx, list, W, H);
+    ctx.strokeStyle = state.uvColor; ctx.lineWidth = lw; strokeUV(ctx, list, W, H);
+  }
+  if (sel){ pathIslands(ctx, list, sel, W, H); ctx.strokeStyle = '#ffc400'; ctx.lineWidth = lw * 2.2; ctx.stroke(); }
+  if (hov){
+    pathIslands(ctx, list, hov, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = lw * 2.6; ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = lw * 1.4; ctx.stroke();
+  }
 }
 function redrawUv(){ for (const el of $('#slots').querySelectorAll('.slot')) el._uv?.(); }
 function renderUvTools(){
@@ -722,6 +844,42 @@ for (const [c, nm] of UV_COLORS){
 $('#uvOn').onclick = () => { state.uv = !state.uv; savePref('gd.uv', state.uv ? '1' : '0'); renderUvTools(); redrawUv(); };
 const slotRO = new ResizeObserver(es => { for (const e of es) e.target.closest('.slot')?._uv?.(); });
 
+// 텍스처 위 마우스/터치 → 조각 고르기
+function bindIslandPick(s, drop){
+  let list = null; uvMeshes(s).then(l => list = l);
+  const at = e => {
+    if (!list) return null;
+    const r = drop.getBoundingClientRect(), k = Math.min(r.width / s.w, r.height / s.h);
+    const u = (e.clientX - r.left - (r.width - s.w * k) / 2) / (s.w * k), v = (e.clientY - r.top - (r.height - s.h * k) / 2) / (s.h * k);
+    return (u < 0 || u > 1 || v < 0 || v > 1) ? null : pickAt(list, u, v);
+  };
+  let raf = 0, lastE = null;
+  drop.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    lastE = e; if (raf) return;
+    raf = requestAnimationFrame(() => { raf = 0;
+      const p = at(lastE); drop.style.cursor = p ? 'pointer' : 'default';
+      const next = p ? { tex:s.tex, picks:p } : null;
+      if (sig(next?.picks) !== sig(state.isleHover?.picks)){ state.isleHover = next; applyHighlight(); }
+    });
+  });
+  drop.addEventListener('pointerleave', () => { if (state.isleHover){ state.isleHover = null; applyHighlight(); } });
+  drop.addEventListener('click', e => {
+    const p = at(e), multi = e.shiftKey || e.ctrlKey || e.metaKey;
+    const curSel = state.sel?.tex === s.tex ? state.sel.picks : null;
+    let next;
+    if (!p) next = multi ? curSel : null;                       // 빈 곳: 해제
+    else if (multi && curSel){                                   // 여러 개: 넣었다 뺐다
+      next = new Map([...curSel].map(([g, ids]) => [g, new Set(ids)]));
+      for (const [g, ids] of p){ const set = next.get(g) || new Set(); for (const i of ids) set.has(i) ? set.delete(i) : set.add(i); set.size ? next.set(g, set) : next.delete(g); }
+      if (!next.size) next = null;
+    } else next = sig(p) === sig(curSel) ? null : p;             // 같은 조각 다시 누르면 해제
+    state.sel = next ? { tex:s.tex, picks:next } : (state.sel?.tex === s.tex ? null : state.sel);
+    if (next) state.pin = null;
+    state.isleHover = null; applyHighlight();
+  });
+}
+
 /* ───────── 스킨 슬롯 ───────── */
 function renderSlots(){
   const box = $('#slots'); box.textContent = ''; slotRO.disconnect();
@@ -734,7 +892,7 @@ function renderSlots(){
     const img = el.querySelector('img'), file = el.querySelector('input'), drop = el.querySelector('.drop');
     const uvc = document.createElement('canvas'); uvc.className = 'uv'; uvc.hidden = true; img.after(uvc);
     el._uv = () => drawUvOverlay(s, uvc);
-    slotRO.observe(drop);
+    slotRO.observe(drop); bindIslandPick(s, drop);
     const err = el.querySelector('.err'), mine = () => state.custom[s.tex];
     const refresh = () => {
       img.src = mine()?.url || DATA + s.file;
@@ -768,7 +926,8 @@ function renderSlots(){
     // 파츠 위치: 마우스를 올리면 미리 보기, '위치' 버튼(또는 제목 줄)을 누르면 고정/해제
     el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse'){ state.hover = s.tex; applyHighlight(); } });
     el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && state.hover === s.tex){ state.hover = null; applyHighlight(); } });
-    const pin = () => { if (state.hl === 'off') return; state.pin = state.pin === s.tex ? null : s.tex; applyHighlight(); };
+    const pin = () => { if (state.hl === 'off') return; state.pin = state.pin === s.tex ? null : s.tex;
+      if (state.pin) state.sel = null; applyHighlight(); };
     el.querySelector('.loc').onclick = e => { e.stopPropagation(); pin(); };
     el.querySelector('.slot-title').onclick = pin; el.querySelector('.slot-title').style.cursor = 'pointer';
     el.querySelector('.dlTex').onclick = () => download(DATA + s.file, `${s.tex.replace(/\.\w+$/, '')}_원본.png`);
