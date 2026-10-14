@@ -151,12 +151,10 @@ a{color:inherit}
     <div class="filters" id="filters" role="group" aria-label="분류">
       <button data-f="all" aria-pressed="true">전체</button>
       <button data-f="set" aria-pressed="false">3종 세트</button>
-      <button data-f="merc" aria-pressed="false">용병 장비</button>
-      <button data-f="etc" aria-pressed="false">그 외</button>
     </div>
     <label class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="패키지·코스튬·용병 이름, 초성 (예: 블랙 캣, ㅎㅇㅇ)" autocomplete="off" aria-label="코스튬 검색">
+      <input id="q" type="search" placeholder="패키지·코스튬 이름, 초성 (예: 블랙 캣, ㅂㄹㅋ)" autocomplete="off" aria-label="코스튬 검색">
     </label>
     <ul class="packs" id="packs" role="listbox" aria-label="패키지"></ul>
     <div class="count" id="count"></div>
@@ -330,7 +328,7 @@ function partsOf(p){ return PARTS.filter(k => p.items[k]); }
 function subText(p){
   const ks = partsOf(p);
   const what = ks.length === 3 ? '투구·갑옷·망토' : ks.map(k => PART_KO[k]).join('·');
-  return [p.merc && p.merc !== p.name ? p.merc : '', what].filter(Boolean).join(' · ');
+  return what;
 }
 
 async function init(){
@@ -345,7 +343,7 @@ async function init(){
     return;
   }
   for (const p of state.db.packs){
-    const names = [p.name, p.merc, ...partsOf(p).map(k => p.items[k].name)];
+    const names = [p.name, ...partsOf(p).map(k => p.items[k].name)];
     p._s = nz(names.join('|')); p._c = chosung(p._s); p._codes = partsOf(p).map(k => String(p.items[k].code)).join('|');
   }
   const [id, view] = location.hash.slice(1).split('/');
@@ -360,8 +358,6 @@ function filtered(){
   const q = nz($('#q').value);
   let list = state.db.packs;
   if (state.filter === 'set') list = list.filter(p => partsOf(p).length === 3);
-  else if (state.filter === 'merc') list = list.filter(p => p.merc);
-  else if (state.filter === 'etc') list = list.filter(p => !p.merc);
   if (q){
     const cho = isCho(q);
     list = list.filter(p => cho ? p._c.includes(q) : (p._s.includes(q) || p._codes.includes(q)));
