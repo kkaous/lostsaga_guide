@@ -79,6 +79,8 @@ a{color:inherit}
 
 /* 뷰어 */
 .viewer{overflow:hidden}
+/* 넓은 화면: 아래쪽 스킨 칸을 보면서도 3D가 화면에 남도록 */
+@media (min-width:1101px){.viewer{position:sticky;top:12px}}
 .stage{position:relative;aspect-ratio:4/3.2;background:var(--stage);border-radius:12px 12px 0 0;touch-action:none}
 .stage canvas{display:block;width:100%;height:100%;border-radius:12px 12px 0 0;cursor:grab}
 .stage canvas:active{cursor:grabbing}
@@ -106,8 +108,38 @@ a{color:inherit}
 .slot{border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .drop{position:relative;display:block;aspect-ratio:1;background:repeating-conic-gradient(var(--panel-2) 0 25%,var(--panel) 0 50%) 0 0/16px 16px;cursor:pointer}
 .drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:auto}
-.drop .over{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--steel) 80%,transparent);color:#fff;font-weight:700;opacity:0;transition:opacity .15s;text-align:center;padding:12px}
-.drop:hover .over,.drop.dragging .over{opacity:1}
+.drop canvas.uv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+/* 마우스를 올려도 텍스처·UV 선이 가려지지 않게 아래 띠로만 안내 (끌어다 놓을 때만 전체 덮기) */
+.drop .over{position:absolute;left:0;right:0;bottom:0;display:grid;place-items:center;background:color-mix(in srgb,var(--steel) 85%,transparent);color:#fff;font-weight:700;font-size:12.5px;opacity:0;transition:opacity .15s;text-align:center;padding:7px 10px}
+.drop .over br{display:none}
+.drop:hover .over{opacity:1}
+.drop.dragging .over{opacity:1;top:0;font-size:14px}
+.drop.dragging .over br{display:inline}
+.slot{transition:border-color .15s,box-shadow .15s}
+.slot.hl{border-color:var(--steel)}
+.slot.pinned{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
+.loc{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;color:var(--muted)}
+.loc:hover{border-color:var(--steel);color:var(--ink)}
+.loc[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:var(--panel);font-weight:700}
+.loc svg{width:13px;height:13px}
+.slot-title .r{display:flex;align-items:center;gap:6px}
+#slots[data-hl=off] .loc{display:none}
+
+/* 스킨 도구 */
+.skin-tools{margin:10px 14px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.tool-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tool-row > span{font-size:12.5px;font-weight:700}
+.skin-tools .tb{padding:4px 9px;font-size:12.5px}
+.swatches{display:inline-flex;gap:5px;align-items:center}
+.swatches button{width:18px;height:18px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.swatches button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
+.swatches[aria-disabled=true]{opacity:.35;pointer-events:none}
+.tool-tip{font-size:11.5px;color:var(--muted);margin:0;line-height:1.45}
+.hl-tag{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 8px;font-size:12.5px;font-weight:700;box-shadow:0 2px 8px rgb(0 0 0/.08);pointer-events:none}
+.hl-tag i{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none}
+.hl-tag.none i{background:var(--muted)}
+.hl-tag.none{font-weight:500;color:var(--muted)}
+@media (max-width:760px){.hl-tag{top:auto;bottom:10px;right:10px}}
 .slot-info{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .slot-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;background:var(--panel-2);font-variant-numeric:tabular-nums}
@@ -178,6 +210,7 @@ a{color:inherit}
       <div class="stage-title" id="stitle" hidden><img id="sicon" alt="" hidden><div><b id="sname"></b><span id="scode"></span></div></div>
       <div class="stage-msg" id="smsg">장비 목록을 불러오는 중…</div>
       <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
+      <div class="hl-tag" id="hlTag" hidden><i></i><span></span></div>
     </div>
     <div class="toolbar">
       <div class="seg" role="group" aria-label="치장 성별">
@@ -205,6 +238,20 @@ a{color:inherit}
   <!-- 스킨 패널 -->
   <section class="card skin" aria-label="스킨">
     <div class="card-h"><h2>스킨 텍스처</h2><span class="muted" id="slotCount" style="font-size:12px"></span></div>
+    <div class="skin-tools">
+      <div class="tool-row">
+        <span>3D에서 파츠 위치</span>
+        <div class="seg" id="hlMode" role="group" aria-label="파츠 위치 표시 방식">
+          <button class="tb" data-m="ghost" title="나머지 부분을 반투명하게">나머지 흐리게</button><button class="tb" data-m="solo" title="그 파츠만 보이게" style="margin-left:-1px;border-radius:0">그 파츠만</button><button class="tb" data-m="off" title="위치 표시 끄기">끔</button>
+        </div>
+      </div>
+      <div class="tool-row">
+        <button class="tb" id="uvOn" aria-pressed="false" title="텍스처 위에 UV 선을 겹쳐서 보기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 14l6-6 4 4 6-6M10 20l4-8"/></svg>UV 선 겹쳐 보기</button>
+        <div class="swatches" id="uvColors" role="group" aria-label="UV 선 색"></div>
+      </div>
+      <p class="tool-tip" id="hlTip"></p>
+    </div>
     <div class="skin-body" id="slots"><div class="empty">장비를 고르면 여기에 텍스처가 나와요.</div></div>
   </section>
 </main>
@@ -217,7 +264,7 @@ a{color:inherit}
       <input type="file" accept=".jpg,.jpeg,image/jpeg" hidden>
     </label>
     <div class="slot-info">
-      <div class="slot-title"><b class="sname"></b><span class="badge size"></span></div>
+      <div class="slot-title"><b class="sname"></b><span class="r"><span class="badge size"></span><button class="loc" aria-pressed="false" title="3D에서 이 파츠 위치를 계속 표시"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>위치</button></span></div>
       <div class="slot-row"><span class="fname"></span><span class="badge state"></span></div>
       <div class="fxnote" hidden>빛나는 효과에 쓰이는 이미지예요. 검은 부분은 빛이 나지 않아요.</div>
       <div class="err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span></span></div>
@@ -246,7 +293,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const DATA = 'geardesign_data/';
 const $ = s => document.querySelector(s);
 const state = { db:null, cat:null, item:null, variant:0, showChar:false, outline:true, wire:false, fx:true, gender:'m',
-                custom:{} /* tex → {url, texture, w, h} — 장비를 바꿔도 유지 */ };
+                custom:{} /* tex → {url, texture, w, h} — 장비를 바꿔도 유지 */,
+                hl: pref('gd.hl', 'ghost'),            // 파츠 위치 표시: ghost(나머지 흐리게) / solo(그 파츠만) / off
+                uv: pref('gd.uv', '0') === '1', uvColor: pref('gd.uvc', '#e0245e'),
+                hover:null, pin:null /* 위치를 보여 줄 텍스처 이름 */ };
+// 보기 설정 기억 (저장소가 막혀 있으면 기본값)
+function pref(k, d){ try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+function savePref(k, v){ try { localStorage.setItem(k, v); } catch {} }
 
 /* ───────── 3D 기본 ───────── */
 const stage = $('#stage');
@@ -277,7 +330,8 @@ new ResizeObserver(resize).observe(stage); resize();
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
-  for (const m of pulseMats) m.opacity = 0.75 + 0.25 * Math.sin(t * 3);
+  for (const m of pulseMats) m.opacity = (0.75 + 0.25 * Math.sin(t * 3)) * (m.userData.dim ?? 1);
+  if (hlMats.length){ const k = 0.16 + 0.12 * Math.sin(t * 4.5); for (const m of hlMats) m.emissive.setRGB(k, k * 0.72, k * 0.15); }
   controls.update(); renderer.render(scene, camera);
 });
 
@@ -349,6 +403,7 @@ async function buildModel(file, mats){
       if (info.outline) addOutline(o, info);
     }
     if (!info.skin && info.tex){ if (!texUsers.has(info.tex)) texUsers.set(info.tex, { orig, mats:[] }); texUsers.get(info.tex).mats.push(mat); }
+    o.userData.tex = info.skin ? null : info.tex;   // 파츠 위치 표시용
     mat.wireframe = state.wire;
     o.material = mat;
   }
@@ -448,7 +503,7 @@ function renderList(){
     b.dataset.code = it.code;
     b.innerHTML = `<span class="ic">${iconSrc(it) ? `<img loading="lazy" alt="" src="${iconSrc(it)}">` : ''}</span><span class="nm"><span></span><small></small></span>`;
     b.querySelector('.nm span').textContent = it.name;
-    b.querySelector('.nm small').textContent = it.merc || (it.rare ? '레어 장비' : '');
+    b.querySelector('.nm small').textContent = it.merc || gradeOf(it);
     b.onclick = () => selectItem(it);
     li.append(b); frag.append(li);
   }
@@ -460,12 +515,12 @@ $('#q').addEventListener('input', renderList);
 /* ───────── 장비 선택 ───────── */
 let loadToken = 0;
 async function selectItem(it, variant = 0){
-  state.item = it; state.variant = variant;
+  state.item = it; state.variant = variant; state.hover = state.pin = null;
   history.replaceState(null, '', '#' + it.code);
   for (const b of $('#items').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.code == it.code);
   $('#stitle').hidden = false; $('#sname').textContent = it.name;
   $('#sicon').hidden = !iconSrc(it); if (iconSrc(it)) $('#sicon').src = iconSrc(it);
-  $('#scode').textContent = [state.db.categories[it.cat], it.merc || (it.rare ? '레어 장비' : ''),
+  $('#scode').textContent = [state.db.categories[it.cat], it.merc || gradeOf(it),
     it.female ? (state.gender === 'w' ? '여성용' : '남성용') : (it.cat === 'weapon' ? '' : '남녀 공용')].filter(Boolean).join(' · ');
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   renderVariants(); renderSlots();
@@ -477,7 +532,7 @@ async function selectItem(it, variant = 0){
     if (token !== loadToken) return;
     itemGroup.clear(); gs.forEach(g => itemGroup.add(g));
     if (state.showChar) await ensureChar();
-    syncCharParts();
+    syncCharParts(); applyHighlight();
     $('#smsg').hidden = true;
     frame(true);
   } catch(e){ console.error(e); if (token === loadToken) $('#smsg').textContent = '모델을 불러오지 못했어요.'; }
@@ -512,7 +567,7 @@ $('#tChar').onclick = async e => {
   if (!state.db?.character){ toast('캐릭터 모델이 아직 변환되지 않았어요.'); return; }
   state.showChar = !state.showChar; e.currentTarget.setAttribute('aria-pressed', state.showChar);
   if (state.showChar){ await ensureChar(); syncCharParts(); }
-  charGroup.visible = state.showChar; frame(true);
+  charGroup.visible = state.showChar; applyHighlight(); frame(true);
 };
 charGroup.visible = false;
 
@@ -527,7 +582,7 @@ function frame(reset){
   if (reset){
     const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 0.95;
     // 캐릭터: 정면 사선 / 장비만: 가장 얇은 축 방향(넓은 면)에서 보기
-    let dir = new THREE.Vector3(0.55, 0.25, 0.8);
+    let dir = new THREE.Vector3(0, 0.12, 1);   // 캐릭터: 게임 미리보기처럼 정면
     if (!state.showChar){
       const ax = s.x <= s.y && s.x <= s.z ? 'x' : (s.y <= s.z ? 'y' : 'z');
       dir = new THREE.Vector3(0.25, 0.2, 0.25); dir[ax] = 1;
@@ -542,8 +597,8 @@ function frame(reset){
 function toggle(id, key, fn){ $(id).onclick = e => { state[key] = !state[key]; e.currentTarget.setAttribute('aria-pressed', state[key]); fn(state[key]); }; }
 state.spin = true;
 toggle('#tSpin', 'spin', v => controls.autoRotate = v);
-toggle('#tOutline', 'outline', v => root.traverse(o => { if (o.userData.outline) o.visible = v; }));
-toggle('#tFx', 'fx', v => root.traverse(o => { if (o.userData.fx) o.visible = v; }));
+toggle('#tOutline', 'outline', () => applyHighlight());
+toggle('#tFx', 'fx', () => applyHighlight());
 toggle('#tWire', 'wire', v => root.traverse(o => { if (o.isMesh && !o.userData.outline) o.material.wireframe = v; }));
 $('#tReset').onclick = () => frame(true);
 for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
@@ -553,15 +608,133 @@ for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
 };
 $('#tShot').onclick = () => download(renderer.domElement.toDataURL('image/png'), `${state.item?.name || 'gear'}_미리보기.png`);
 
+/* ───────── 파츠 위치 표시 ─────────
+   스킨 칸에 마우스를 올리거나 '위치'를 눌러 고정하면, 그 텍스처를 쓰는 메시만 강조
+   ghost: 나머지를 반투명하게 + 해당 파츠를 은은하게 깜빡임 / solo: 해당 파츠만 보이기 */
+const hlMats = [];
+const HL_MODES = { ghost:'나머지 흐리게', solo:'그 파츠만', off:'끔' };
+function applyHighlight(){
+  const tex = state.hover ?? state.pin, on = !!tex && state.hl !== 'off';
+  for (const m of hlMats) m.emissive.setRGB(0, 0, 0);
+  hlMats.length = 0;
+  let found = 0;
+  root.traverse(o => {
+    if (!o.isMesh || o.userData.outline) return;
+    const m = o.material, hit = on && o.userData.tex === tex, dim = on && !hit && state.hl === 'ghost';
+    if (hit) found++;
+    // 먼저 원래대로
+    if (m.userData.hlSave){ Object.assign(m, m.userData.hlSave); delete m.userData.hlSave; m.needsUpdate = true; }
+    m.userData.dim = 1;
+    o.visible = on && state.hl === 'solo' ? hit : (hit || !o.userData.fx || state.fx);
+    for (const c of o.children) if (c.userData.outline) c.visible = state.outline && !dim;
+    if (dim){
+      if (m.userData.glow) m.userData.dim = 0.12;
+      else { m.userData.hlSave = { transparent:m.transparent, opacity:m.opacity, depthWrite:m.depthWrite };
+             m.transparent = true; m.opacity = 0.13; m.depthWrite = false; m.needsUpdate = true; }
+    }
+    if (hit && state.hl === 'ghost' && m.emissive) hlMats.push(m);
+  });
+  // 위치 표시 중 안내 (지금 모양에 그 텍스처가 없으면 알려 줌)
+  const tag = $('#hlTag');
+  tag.hidden = !on;
+  if (on){
+    const s = cur(state.item).slots.find(x => x.tex === tex);
+    tag.classList.toggle('none', !found);
+    tag.querySelector('span').textContent = !found ? `${slotLabel(s)} · 지금 모양에는 안 쓰여요`
+      : `${slotLabel(s)} 위치${state.pin === tex && state.hover == null ? ' · 고정' : ''}`;
+  }
+  for (const el of $('#slots').querySelectorAll('.slot')){
+    el.classList.toggle('hl', on && el.dataset.tex === tex);
+    el.classList.toggle('pinned', state.pin === el.dataset.tex && state.hl !== 'off');
+    el.querySelector('.loc').setAttribute('aria-pressed', state.pin === el.dataset.tex);
+  }
+}
+function slotLabel(s){
+  if (!s) return '이 스킨';
+  const slots = cur(state.item).slots;
+  return `스킨 ${s.no || (slots.indexOf(s) + 1)}`;
+}
+function renderHlMode(){
+  for (const b of $('#hlMode').children) b.setAttribute('aria-pressed', b.dataset.m === state.hl);
+  $('#slots').dataset.hl = state.hl;
+  $('#hlTip').textContent = state.hl === 'off'
+    ? '파츠 위치 표시가 꺼져 있어요.'
+    : '스킨 칸에 마우스를 올리면 왼쪽 3D에서 그 파츠 위치를 보여 줘요. ‘위치’를 누르면 계속 표시돼요.';
+}
+for (const b of $('#hlMode').children) b.onclick = () => {
+  state.hl = b.dataset.m; savePref('gd.hl', state.hl); renderHlMode(); applyHighlight();
+};
+
+/* ───────── UV 선 겹쳐 보기 ───────── */
+const UV_COLORS = [['#e0245e','분홍'], ['#ffd400','노랑'], ['#00c2d1','청록'], ['#ffffff','흰색'], ['#111111','검정']];
+const uvCache = new Map();   // 장비·성별·텍스처 → 그 텍스처를 쓰는 메시들의 {uv, index}
+async function uvMeshes(s){
+  const key = `${state.item.code}|${state.gender}|${s.tex}`;
+  if (uvCache.has(key)) return uvCache.get(key);
+  const out = [];
+  for (const v of cur(state.item).variants) for (const p of partsOf(v)){
+    const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+    for (const o of meshes){
+      const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
+      if (p.materials[idx]?.tex !== s.tex) continue;
+      const uv = o.geometry.attributes.uv, ix = o.geometry.index; if (uv && ix) out.push({ uv, ix });
+    }
+  }
+  uvCache.set(key, out); return out;
+}
+// UV 삼각형을 W×H 캔버스에 그리기
+function strokeUV(ctx, list, W, H){
+  ctx.beginPath();
+  for (const { uv, ix } of list)
+    for (let i = 0; i < ix.count; i += 3)
+      for (let k = 0; k <= 3; k++){
+        const n = ix.getX(i + (k % 3)), x = uv.getX(n) * W, y = uv.getY(n) * H;
+        k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+  ctx.stroke();
+}
+// 스킨 칸 위에 겹치는 UV 선: 화면 크기에 맞춘 해상도로 그려서 선이 또렷하게
+async function drawUvOverlay(s, cv){
+  if (!state.uv){ cv.hidden = true; return; }
+  const box = cv.parentElement.getBoundingClientRect().width || 300;
+  const px = Math.round(box * Math.min(devicePixelRatio || 1, 2));
+  const k = px / Math.max(s.w, s.h), W = Math.round(s.w * k), H = Math.round(s.h * k);
+  const list = await uvMeshes(s);
+  cv.width = W; cv.height = H; cv.hidden = false;
+  const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, W, H);
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, px / 320);
+  // 어떤 텍스처 위에서도 보이도록 얇은 그림자 선을 먼저
+  ctx.strokeStyle = state.uvColor === '#111111' ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.45)';
+  ctx.lineWidth += 1.2; strokeUV(ctx, list, W, H);
+  ctx.strokeStyle = state.uvColor; ctx.lineWidth -= 1.2; strokeUV(ctx, list, W, H);
+}
+function redrawUv(){ for (const el of $('#slots').querySelectorAll('.slot')) el._uv?.(); }
+function renderUvTools(){
+  $('#uvOn').setAttribute('aria-pressed', state.uv);
+  const box = $('#uvColors'); box.setAttribute('aria-disabled', !state.uv);
+  for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.c === state.uvColor);
+}
+for (const [c, nm] of UV_COLORS){
+  const b = document.createElement('button'); b.dataset.c = c; b.style.background = c; b.title = `UV 선 ${nm}`; b.setAttribute('aria-label', `UV 선 ${nm}`);
+  b.onclick = () => { state.uvColor = c; savePref('gd.uvc', c); renderUvTools(); redrawUv(); };
+  $('#uvColors').append(b);
+}
+$('#uvOn').onclick = () => { state.uv = !state.uv; savePref('gd.uv', state.uv ? '1' : '0'); renderUvTools(); redrawUv(); };
+const slotRO = new ResizeObserver(es => { for (const e of es) e.target.closest('.slot')?._uv?.(); });
+
 /* ───────── 스킨 슬롯 ───────── */
 function renderSlots(){
-  const box = $('#slots'); box.textContent = '';
+  const box = $('#slots'); box.textContent = ''; slotRO.disconnect();
   const slots = cur(state.item).slots;
   $('#slotCount').textContent = slots.length ? `${slots.length}장` : '';
   if (!slots.length){ box.innerHTML = '<div class="empty">이 장비는 바꿀 수 있는 텍스처가 없어요.</div>'; return; }
   for (const s of slots){
     const el = $('#slotTpl').content.firstElementChild.cloneNode(true);
+    el.dataset.tex = s.tex;
     const img = el.querySelector('img'), file = el.querySelector('input'), drop = el.querySelector('.drop');
+    const uvc = document.createElement('canvas'); uvc.className = 'uv'; uvc.hidden = true; img.after(uvc);
+    el._uv = () => drawUvOverlay(s, uvc);
+    slotRO.observe(drop);
     const err = el.querySelector('.err'), mine = () => state.custom[s.tex];
     const refresh = () => {
       img.src = mine()?.url || DATA + s.file;
@@ -592,6 +765,12 @@ function renderSlots(){
     for (const ev of ['dragenter','dragover']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragging'); });
     for (const ev of ['dragleave','drop']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragging'); });
     drop.addEventListener('drop', e => handle(e.dataTransfer.files[0]));
+    // 파츠 위치: 마우스를 올리면 미리 보기, '위치' 버튼(또는 제목 줄)을 누르면 고정/해제
+    el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse'){ state.hover = s.tex; applyHighlight(); } });
+    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && state.hover === s.tex){ state.hover = null; applyHighlight(); } });
+    const pin = () => { if (state.hl === 'off') return; state.pin = state.pin === s.tex ? null : s.tex; applyHighlight(); };
+    el.querySelector('.loc').onclick = e => { e.stopPropagation(); pin(); };
+    el.querySelector('.slot-title').onclick = pin; el.querySelector('.slot-title').style.cursor = 'pointer';
     el.querySelector('.dlTex').onclick = () => download(DATA + s.file, `${s.tex.replace(/\.\w+$/, '')}_원본.png`);
     el.querySelector('.dlUv').onclick = () => uvGuide(s, false);
     el.querySelector('.dlLine').onclick = () => uvGuide(s, true);
@@ -599,6 +778,7 @@ function renderSlots(){
       const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = m.userData.glow ? glowTexture(u.orig) : u.orig; m.needsUpdate = true; } refresh(); showErr(''); };
     refresh(); box.append(el);
   }
+  applyHighlight();
 }
 
 // 올린 JPG를 모델에 입히기 (원본에 투명 영역이 있으면 그 모양은 그대로 유지)
@@ -620,7 +800,7 @@ async function applySkin(s, bmp){
   const u = texUsers.get(s.tex); if (u) for (const m of u.mats){ m.map = m.userData.glow ? glowTexture(tex) : tex; m.needsUpdate = true; }
 }
 
-// UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG / lineOnly 면 투명 배경에 선만
+// UV 가이드: 원본을 옅게 깔고 그 위에 UV 선을 그린 PNG / lineOnly 면 투명 배경에 선만 (선 색은 고른 색)
 async function uvGuide(s, lineOnly){
   const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h;
   const ctx = cv.getContext('2d');
@@ -628,28 +808,18 @@ async function uvGuide(s, lineOnly){
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,s.w,s.h);
     ctx.globalAlpha = 0.45; ctx.drawImage(await loadImage(DATA + s.file), 0, 0); ctx.globalAlpha = 1;
   }
-  ctx.strokeStyle = '#e0245e'; ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
-  for (const v of cur(state.item).variants) for (const p of partsOf(v)){
-    const g = (await loadGLB(p.file)).scene; const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
-    for (const o of meshes){
-      const idx = parseInt((o.material.name || 'm0').slice(1)) || 0;
-      if (p.materials[idx]?.tex !== s.tex) continue;
-      const uv = o.geometry.attributes.uv, ix = o.geometry.index; if (!uv || !ix) continue;
-      ctx.beginPath();
-      for (let i = 0; i < ix.count; i += 3){
-        for (let k = 0; k <= 3; k++){
-          const n = ix.getX(i + (k % 3)), x = uv.getX(n) * s.w, y = uv.getY(n) * s.h;
-          k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-        }
-      }
-      ctx.stroke();
-    }
-  }
+  const c = state.uvColor;
+  ctx.strokeStyle = (!lineOnly && c === '#ffffff') ? '#e0245e' : c;   // 흰 배경 가이드에 흰 선은 안 보이니 분홍으로
+  ctx.lineWidth = Math.max(1, s.w / 512); ctx.lineJoin = 'round';
+  strokeUV(ctx, await uvMeshes(s), s.w, s.h);
   download(cv.toDataURL('image/png'), `${s.tex.replace(/\.\w+$/, '')}_${lineOnly ? 'UV선' : 'UV가이드'}.png`);
 }
 
 /* ───────── 도우미 ───────── */
 // 여성 치장이면 여성용 모델/스킨(있을 때만), 아니면 남성(공용)
+// 용병 없는 장비 등급: 크로노 장비는 모두 유니크, 나머지는 레어
+const UNIQUE_RE = /^크로노/;
+const gradeOf = it => it.merc ? '' : (it.unique || UNIQUE_RE.test(it.name)) ? '유니크 장비' : it.rare ? '레어 장비' : '';
 const cur = it => (state.gender === 'w' && it.female) ? it.female : it;
 const partsOf = v => v.parts || [{ role:'equip', mesh:v.mesh, file:v.file, materials:v.materials }];
 // 아이콘은 수치 사전(skill_dictionary.html)과 같은 방식: items.json 안에 base64(webp)로 들어 있음
@@ -661,6 +831,7 @@ function loadImage(src){ return new Promise((ok, no) => { const i = new Image();
 function download(href, name){ const a = document.createElement('a'); a.href = href; a.download = name; document.body.append(a); a.click(); a.remove(); }
 function toast(msg){ const m = $('#smsg'); m.hidden = false; m.textContent = msg; setTimeout(() => { if (state.item) m.hidden = true; }, 2200); }
 
+renderHlMode(); renderUvTools();
 init();
 </script>
 </body>
