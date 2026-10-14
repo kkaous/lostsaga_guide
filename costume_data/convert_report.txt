@@ -1,0 +1,118 @@
+[자세] custom_pose_01.ani 적용
+아이템 정의 3097개 읽음 (749개 파일)
+  [모델 없음] 300024 라이트닝 망토 (이펙트만 있음)
+  [모델 없음] 200041 태극 기공 (이펙트만 있음)
+  [모델 없음] 210041 고급 태극기공 (이펙트만 있음)
+  [모델 없음] 310075 고급 귀신나비 (이펙트만 있음)
+  [모델 없음] 310076 고급 마도서 (이펙트만 있음)
+  [모델 없음] 310087 고급 도깨비불 (이펙트만 있음)
+  [모델 없음] 310089 고급 팅커벨 (이펙트만 있음)
+  [모델 없음] 210112 고급 탑플레이트징표 (이펙트만 있음)
+  [모델 없음] 310116 고급 김윤성문양 (이펙트만 있음)
+  [모델 없음] 210128 고급 박일표귀걸이 (이펙트만 있음)
+  [모델 없음] 310128 고급 박일표문양 (이펙트만 있음)
+  [모델 없음] 310131 고급 실랏문양 (이펙트만 있음)
+  [같은 이름 메시 2개] shadowranger_body.msh → 최신 파일 ..\rs\resource\mesh\shadowranger_body.msh
+  [같은 이름 메시 2개] shadowranger_body_hw.msh → 최신 파일 ..\rs\resource\mesh\shadowranger_body_hw.msh
+  [같은 이름 메시 2개] shadowranger_cap.msh → 최신 파일 ..\rs\resource\mesh\shadowranger_cap.msh
+  [같은 이름 메시 2개] shadowranger_cloak.msh → 최신 파일 ..\rs\resource\mesh\shadowranger_cloak.msh
+  [같은 이름 메시 2개] shadowranger_cloak_hw.msh → 최신 파일 ..\rs\resource\mesh\shadowranger_cloak_hw.msh
+  [같은 이름 메시 2개] geomje_body.msh → 최신 파일 ..\rs\resource\mesh\geomje_body.msh
+  [같은 이름 메시 2개] geomje_body_hw.msh → 최신 파일 ..\rs\resource\mesh\geomje_body_hw.msh
+  [같은 이름 메시 2개] geomje_cap.msh → 최신 파일 ..\rs\resource\mesh\geomje_cap.msh
+  [같은 이름 메시 2개] geomje_cap_hw.msh → 최신 파일 ..\rs\resource\mesh\geomje_cap_hw.msh
+  [같은 이름 메시 2개] geomje_cloak.msh → 최신 파일 ..\rs\resource\mesh\geomje_cloak.msh
+  [같은 이름 메시 2개] saber_body.msh → 최신 파일 ..\rs\resource\mesh\saber_body.msh
+  [같은 이름 메시 2개] saber_hand.msh → 최신 파일 ..\rs\resource\mesh\saber_hand.msh
+  [같은 이름 메시 2개] saber_body_hw.msh → 최신 파일 ..\rs\resource\mesh\saber_body_hw.msh
+  [같은 이름 메시 2개] saber_hand_hw.msh → 최신 파일 ..\rs\resource\mesh\saber_hand_hw.msh
+  [같은 이름 메시 2개] saber_cap.msh → 최신 파일 ..\rs\resource\mesh\saber_cap.msh
+  [같은 이름 메시 2개] saber_cap_hw.msh → 최신 파일 ..\rs\resource\mesh\saber_cap_hw.msh
+  [같은 이름 메시 2개] saber_cloak.msh → 최신 파일 ..\rs\resource\mesh\saber_cloak.msh
+  [모델 없음] 310141 고급 하데스장신구 (이펙트만 있음)
+  [모델 없음] 210194 고급 네오 O-Bot (이펙트만 있음)
+  [모델 없음] 310211 고급 티메가테 장신구 (이펙트만 있음)
+  [모델 없음] 311086 미카엘날개 (이펙트만 있음)
+  [모델 없음] 311360 글라키에스 결정 (이펙트만 있음)
+  [모델 없음] 311309 포세이돈 장신구 (이펙트만 있음)
+  [모델 없음] 311346 브레이커 문양 (이펙트만 있음)
+  [모델 없음] 210145 고급 에너지연구원 투구 (이펙트만 있음)
+  [모델 없음] 311024 기공사 실드 (이펙트만 있음)
+  [모델 없음] 311093 유령망토 (이펙트만 있음)
+  [모델 없음] 311044 스카디 오브 (이펙트만 있음)
+  [모델 없음] 311048 차원술사 오브 (이펙트만 있음)
+  [같은 이름 메시 2개] titan_cap.msh → 최신 파일 ..\rs\resource\mesh\titan_cap.msh
+  [같은 이름 메시 2개] brujo_cloak.msh → 최신 파일 ..\rs\resource\mesh\brujo_cloak.msh
+  [모델 없음] 311065 메탈기어장신구 (이펙트만 있음)
+  [같은 이름 메시 2개] bomberman_body.msh → 최신 파일 ..\rs\resource\mesh\bomberman_body.msh
+  [같은 이름 메시 2개] bomberman_hand.msh → 최신 파일 ..\rs\resource\mesh\bomberman_hand.msh
+  [같은 이름 메시 2개] bomberman_body_hw.msh → 최신 파일 ..\rs\resource\mesh\bomberman_body_hw.msh
+  [모델 없음] 311073 고대 정령 장신구 (이펙트만 있음)
+  [같은 이름 메시 2개] instantmove_cloak.msh → 최신 파일 ..\rs\resource\mesh\instantmove_cloak.msh
+  [모델 없음] 311143 체인매지션 장신구 (이펙트만 있음)
+  [같은 이름 메시 2개] blade_cap.msh → 최신 파일 ..\rs\resource\mesh\blade_cap.msh
+  [같은 이름 메시 2개] blade_cap_hw.msh → 최신 파일 ..\rs\resource\mesh\blade_cap_hw.msh
+  [같은 이름 메시 2개] zeus_body.msh → 최신 파일 ..\rs\resource\mesh\zeus_body.msh
+  [같은 이름 메시 2개] zeus_hand.msh → 최신 파일 ..\rs\resource\mesh\zeus_hand.msh
+  [같은 이름 메시 2개] zeus_body_hw.msh → 최신 파일 ..\rs\resource\mesh\zeus_body_hw.msh
+  [같은 이름 메시 2개] zeus_hand_hw.msh → 최신 파일 ..\rs\resource\mesh\zeus_hand_hw.msh
+  [같은 이름 메시 2개] rainbow_body.msh → 최신 파일 ..\rs\resource\mesh\rainbow_body.msh
+  [같은 이름 메시 2개] rainbow_hand.msh → 최신 파일 ..\rs\resource\mesh\rainbow_hand.msh
+  [같은 이름 메시 2개] rainbow_body_hw.msh → 최신 파일 ..\rs\resource\mesh\rainbow_body_hw.msh
+  [같은 이름 메시 2개] 2014santa_body.msh → 최신 파일 ..\rs\resource\mesh\2014santa_body.msh
+  [같은 이름 메시 2개] 2014santa_hand.msh → 최신 파일 ..\rs\resource\mesh\2014santa_hand.msh
+  [같은 이름 메시 2개] 2014santa_body_hw.msh → 최신 파일 ..\rs\resource\mesh\2014santa_body_hw.msh
+  [같은 이름 메시 2개] 2014santa_hand_hw.msh → 최신 파일 ..\rs\resource\mesh\2014santa_hand_hw.msh
+  [같은 이름 메시 2개] 2014santa_cap.msh → 최신 파일 ..\rs\resource\mesh\2014santa_cap.msh
+  [같은 이름 메시 2개] 2014santa_cap_hw.msh → 최신 파일 ..\rs\resource\mesh\2014santa_cap_hw.msh
+  [같은 이름 메시 2개] 2014santa_cloak.msh → 최신 파일 ..\rs\resource\mesh\2014santa_cloak.msh
+  [같은 이름 메시 2개] wingsuit_body.msh → 최신 파일 ..\rs\resource\mesh\wingsuit_body.msh
+  [같은 이름 메시 2개] wingsuit_hand.msh → 최신 파일 ..\rs\resource\mesh\wingsuit_hand.msh
+  [같은 이름 메시 2개] wingsuit_body_hw.msh → 최신 파일 ..\rs\resource\mesh\wingsuit_body_hw.msh
+  [같은 이름 메시 2개] wingsuit_hand_hw.msh → 최신 파일 ..\rs\resource\mesh\wingsuit_hand_hw.msh
+  [같은 이름 메시 2개] avatar_cap.msh → 최신 파일 ..\rs\resource\mesh\avatar_cap.msh
+  [같은 이름 메시 2개] magicengineer_cloak.msh → 최신 파일 ..\rs\resource\mesh\magicengineer_cloak.msh
+  [아이콘 없음] 311180 핑크 발렌타인 장신구
+  [모델 없음] 311087 리퀴드 오브 (이펙트만 있음)
+  [모델 없음] 311264 블루 비행기 (이펙트만 있음)
+  [모델 없음] 311265 블랙 비행기 (이펙트만 있음)
+  [모델 없음] 311266 퍼플 비행기 (이펙트만 있음)
+  [모델 없음] 311332 사서 마법책 (이펙트만 있음)
+  [모델 없음] 331007 화이트 폴리네시안 카카모라 (이펙트만 있음)
+  [모델 없음] 331036 레드 아케인 스피넬 마법진 (이펙트만 있음)
+  [모델 없음] 331037 제이드 아케인 스피넬 마법진 (이펙트만 있음)
+  [모델 없음] 331038 퍼플 아케인 스피넬 마법진 (이펙트만 있음)
+  [모델 없음] 331118 스카이블루 바캉스 장신구 (이펙트만 있음)
+  [모델 없음] 331122 밤하늘 장신구 (이펙트만 있음)
+  [모델 없음] 331127 화이트 발렌타인 장신구 (이펙트만 있음)
+  [모델 없음] 331128 핑크 데이트 장신구 (이펙트만 있음)
+  [모델 없음] 331135 퍼플문 장신구 (이펙트만 있음)
+  [모델 없음] 331139 청룡 한복 장신구 (이펙트만 있음)
+  [모델 없음] 331142 스카이블루 아이돌 장신구 (이펙트만 있음)
+  [모델 없음] 331145 유카타 축제 장신구 (이펙트만 있음)
+  [모델 없음] 331167 설녀 얼음 결정 (이펙트만 있음)
+  [모델 없음] 310024 고급 라이트닝오브 (이펙트만 있음)
+  [모델 없음] 310149 고급 환마강시 망토 (이펙트만 있음)
+  [모델 없음] 310189 고급 배가본드 망토 (이펙트만 있음)
+  [모델 없음] 211022 화룡 (이펙트만 있음)
+  [모델 없음] 211039 파계승 징표 (이펙트만 있음)
+  [모델 없음] 211050 전설의 징표 (이펙트만 있음)
+  [모델 없음] 211083 흑룡 (이펙트만 있음)
+  [같은 이름 메시 2개] madblaster_cap.msh → 최신 파일 ..\rs\resource\mesh\madblaster_cap.msh
+  [모델 없음] 331042 축구응원 장신구 (이펙트만 있음)
+  [모델 없음] 311006 파이어 오브 (이펙트만 있음)
+  [모델 없음] 311022 제압부 (이펙트만 있음)
+  [모델 없음] 311027 U.F.O (이펙트만 있음)
+  [모델 없음] 311080 U.F.O Mk2 (이펙트만 있음)
+  [모델 없음] 311082 L81 엘리오 주사위 (이펙트만 있음)
+  [모델 없음] 311108 2014 피닉스날개 (이펙트만 있음)
+  [모델 없음] 311117 L111 엘리오 롤링 (이펙트만 있음)
+  [모델 없음] 311129 데스노트 (이펙트만 있음)
+  [모델 없음] 311203 2016 고대기동장치 (이펙트만 있음)
+  [모델 없음] 311229 포켓볼 (이펙트만 있음)
+  [모델 없음] 311291 2017 파이어 오브 (이펙트만 있음)
+  [모델 없음] 311314 축구선수 등번호 (이펙트만 있음)
+  [모델 없음] 331006 그린 폴리네시안 카카모라 (이펙트만 있음)
+  [모델 없음] 331008 블루 폴리네시안 카카모라 (이펙트만 있음)
+  [모델 없음] 331164 퍼플 아이돌 미니 마이크 (이펙트만 있음)
+  [모델 없음] 331165 골드 아이돌 미니 마이크 (이펙트만 있음)
