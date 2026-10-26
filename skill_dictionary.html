@@ -119,6 +119,25 @@ th.num{text-align:right}
 .gtab .gu{background:color-mix(in srgb,var(--gold) 18%,transparent)}
 .gtab .gper{color:var(--muted);font-size:11.5px}
 .gnote{font-size:12px;color:var(--muted);line-height:1.6;padding:0 0 12px}
+.dc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:10px}
+.dc-grid fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 12px 12px;margin:0;display:grid;gap:8px;min-width:0}
+.dc-grid legend{font-weight:700;font-size:13px;padding:0 4px}
+.dc-grid label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.dc-grid select,.dc-grid input,.dc-cal input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
+.dc-steps{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.dc-steps>div{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:110px;background:var(--bg)}
+.dc-steps span{font-size:11.5px;color:var(--muted)}
+.dc-steps b{font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.dc-steps small{font-size:11px;color:var(--muted)}
+.dc-steps .dc-final{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--bg))}
+.dc-steps .dc-final b{font-size:20px}
+.dc-steps b.dc-un{color:var(--g-r);font-size:16px}
+.dc-cal{margin:6px 0 10px;border-top:1px dashed var(--line)}
+.dc-cal summary{cursor:pointer;padding:9px 0;font-weight:700;font-size:13px}
+.dc-cal td input{width:80px}
+.dc-btns{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.dc-btns button,.dc-cal td button{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.dc-btns button:hover{border-color:var(--steel)}
 .spx{margin-top:6px;display:grid;gap:3px;font-size:12px;padding:6px 8px;border-left:3px solid var(--gold);background:var(--steel-soft);border-radius:0 4px 4px 0}
 .spx b{color:var(--ink);margin-right:4px}
 #lv{width:110px}
@@ -185,6 +204,29 @@ th.num{text-align:right}
     <summary>육성 효과표 <small>100강 · 200강 · 300강에서 실제로 오르는 양</small></summary>
     <div class="scroll"><table class="gtab" id="growth"></table></div>
     <div class="gnote">구간 안에서는 1강마다 같은 양씩 오르고, 100강·200강을 넘으면 1강당 오르는 양만 줄어듦 (게임 육성 설정 기준). 실제 값은 소수점까지 계속 올라 <b>죽은 구간이 없음</b> — 쿨타임이 정수 초로 보여 계단처럼 보일 뿐. 쿨타임은 아빠킹 실측과 평균 0.2초 차이로 검증, 공격력·방어력의 실제 피해 반영은 미검증. 위 <b>육성 수치</b> 칸에 숫자를 넣으면 그 수치 열이 추가됨.</div>
+  </details>
+  <details class="growth dcalc" id="dcalc-box">
+    <summary>대미지 계산기 <small>공격력 육성 → 상대 방어까지 반영한 실전 대미지</small></summary>
+    <div class="dc-grid">
+      <fieldset><legend>공격</legend>
+        <label>용병·장비<select id="dc-am"></select></label>
+        <label>동작<select id="dc-aa"></select></label>
+        <label>공격력 육성<input id="dc-al" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+      </fieldset>
+      <fieldset><legend>상대</legend>
+        <label>용병 (장비 방어 자동 입력)<select id="dc-dm"></select></label>
+        <label>장비 방어 수치 합<input id="dc-dac" type="number" step="0.5" value="0" inputmode="decimal"></label>
+        <label>방어력 육성<input id="dc-dl" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+        <label>상대 상태<select id="dc-st"><option value="1">서 있음 (×1)</option><option value="0.5">쓰러진 상태 (×0.5)</option><option value="0.5">공중에 뜬 상태 (×0.5)</option><option value="0.5">빙결 상태 (×0.5)</option><option value="0.5">가드 중 스킬에 맞음 (×0.5)</option></select></label>
+      </fieldset>
+    </div>
+    <div class="dc-out" id="dc-out"></div>
+    <details class="dc-cal"><summary>방어 공식 실측 보정 <small id="dc-calst"></small></summary>
+      <div class="gnote">연습모드에서 같은 공격을 상대 방어만 바꿔 맞혀보고 들어간 피해를 적으면, 방어 공식(피해 배율 = c ÷ (1 + 방어/K))을 맞춰서 위 계산에 적용함. 1개면 K만, 2개 이상이면 c·K 둘 다 맞춤. 상대 방어 0일 때 1개 + 높은 방어 1~2개가 가장 좋음. 입력값은 이 브라우저에만 저장됨.</div>
+      <div class="scroll"><table class="gtab" id="dc-cal"></table></div>
+      <div class="dc-btns"><button type="button" id="dc-add">현재 선택으로 실측 줄 추가</button><button type="button" id="dc-clear">실측 전부 지우기</button></div>
+    </details>
+    <div class="gnote">기본 대미지 = 게임 설정의 동작 대미지. 공격력 육성은 대미지 × (1 + 공격력%)로 적용(설정 주석 기준, 미검증). 방어 수치 = 장비 방어 합 + 방어력 육성(100강 +66.7 · 200강 +106.7 · 300강 +146.7). 상태 배율은 게임 설정값. 방어 공식은 게임 파일에 없어 실측 보정 전에는 "방어 0 기준"만 표시.</div>
   </details>
   <div id="out"></div>
   <nav class="pager" id="pager" aria-label="페이지" hidden></nav>
@@ -433,6 +475,70 @@ function growthTable(){ const t=document.getElementById('growth'); if(!t) return
   }<tr><td><b>게이지 40 장비 쿨</b></td>${cols.map(c=>`<td class="num${c===U?' gu':''}">${(0.638*40/(1+growV(c,[90,70,50])/100)).toFixed(1)}초</td>`).join('')}<td class="gper">0.638 × 게이지 ÷ (1+쿨감%)</td></tr></tbody>`; }
 $('#lv').addEventListener('input', growthTable);
 growthTable();
+// ---- 대미지 계산기 ----
+(function(){
+  const g=id=>document.getElementById(id);
+  const atkPct=L=>growV(L,[70,65,50]), defAC=L=>growV(L,[200,120,120]);
+  const nm=k=>String(D.m[k]||k).replace(/^\[[^\]]*\]\s*/,'');
+  const groups=[...new Set(D.blocks.map(b=>b[0]))].filter(k=>D.m[k]);
+  const ord=k=>/^\d+$/.test(k)?[0,+k]:[1,nm(k)];
+  groups.sort((a,b)=>{const x=ord(a),y=ord(b);return x[0]-y[0]||(x[0]?String(x[1]).localeCompare(y[1],'ko'):x[1]-y[1]);});
+  g('dc-am').innerHTML=groups.map(k=>`<option value="${esc(k)}">${/^\d+$/.test(k)?k+' ':''}${esc(nm(k))}${/^\d+$/.test(k)?'':' ('+esc((D.m[k].match(/^\[([^\]]*)\]/)||['',''])[1])+')'}</option>`).join('');
+  function fillAtk(){ const k=g('dc-am').value; const opts=[];
+    D.blocks.filter(b=>b[0]===k).forEach(b=>b[3].forEach(([lab,id])=>{ const a=D.attrs[String(id)]; if(!a||!(a[0]>0)) return;
+      opts.push(`<option value="${a[0]}">${esc(b[1])} · ${esc(lab)} — 대미지 ${a[0]}</option>`); }));
+    g('dc-aa').innerHTML=opts.join('')||'<option value="0">대미지 있는 동작 없음</option>'; }
+  const mercs=Object.keys(D.m).filter(k=>/^\d+$/.test(k)).sort((a,b)=>a-b);
+  g('dc-dm').innerHTML='<option value="">직접 입력</option>'+mercs.map(k=>`<option value="${k}">${k} ${esc(D.m[k])}</option>`).join('');
+  function fillDef(){ const k=g('dc-dm').value; if(!k) return; let sum=0;
+    ['무기','갑옷','투구','망토'].forEach(sl=>{ const r=D.items.find(i=>i[0]===k&&i[2]===sl&&/^기본/.test(i[1])); if(r&&r[6]!=null) sum+=+r[6]; });
+    g('dc-dac').value=sum; }
+  const KEY='ls-dmg-cal'; let cal=[];
+  try{ cal=JSON.parse(localStorage.getItem(KEY)||'[]')||[]; }catch(e){ cal=[]; }
+  const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(cal)); }catch(e){} };
+  const num=(v,d=0)=>{ const x=parseFloat(v); return isFinite(x)?x:d; };
+  const clampL=v=>Math.max(0,Math.min(300,num(v)));
+  function fit(){ const pts=cal.filter(p=>p.hit>0&&p.base>0).map(p=>{ const ac=num(p.dac)+defAC(clampL(p.dl)); const raw=p.base*(1+atkPct(clampL(p.al))/100)*num(p.st,1); return {ac,r:p.hit/raw}; });
+    if(!pts.length) return null;
+    if(pts.length===1){ const {ac,r}=pts[0]; if(!(ac>0&&r<1&&r>0)) return {err:'실측 1개일 때는 상대 방어가 0보다 크고, 피해가 방어 0 기준보다 작아야 함',n:1}; return {c:1,K:ac/(1/r-1),n:1,pts}; }
+    const n=pts.length,xs=pts.map(p=>p.ac),ys=pts.map(p=>1/p.r),mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;
+    let sxy=0,sxx=0; xs.forEach((x,i)=>{sxy+=(x-mx)*(ys[i]-my); sxx+=(x-mx)**2;});
+    if(sxx===0) return {err:'방어 수치가 서로 다른 실측이 2개 이상 필요',n};
+    const B=sxy/sxx, A=my-B*mx; if(!(A>0&&B>0)) return {err:'실측이 "방어가 높을수록 피해가 줄어드는" 모양이 아님 — 값 확인 필요',n};
+    return {c:1/A,K:A/B,n,pts}; }
+  const mult=(F,ac)=>F.c/(1+ac/F.K);
+  const f1=x=>(Math.round(x*10)/10).toFixed(1);
+  function render(){
+    const base=num(g('dc-aa').value), al=clampL(g('dc-al').value), dl=clampL(g('dc-dl').value), dac=num(g('dc-dac').value), st=num(g('dc-st').value,1);
+    const ap=atkPct(al), raw=base*(1+ap/100)*st, ac=dac+defAC(dl), F=fit();
+    const ok=F&&!F.err;
+    g('dc-calst').textContent = !F ? '(실측 없음)' : F.err ? '(보정 불가: '+F.err+')' : `(실측 ${F.n}개 · c=${F.c.toFixed(3)} · K=${F.K.toFixed(1)})`;
+    let h=`<div class="dc-steps">
+      <div><span>기본 대미지</span><b>${base}</b></div>
+      <div><span>공격력 육성 ${al}강</span><b>+${ap.toFixed(1)}%</b></div>
+      ${st!==1?`<div><span>상대 상태</span><b>×${st}</b></div>`:''}
+      <div><span>방어 0 기준</span><b>${f1(raw)}</b></div>
+      <div><span>상대 방어 수치</span><b>${f1(ac)}</b><small>장비 ${dac} + 육성 ${f1(defAC(dl))}</small></div>
+      <div class="dc-final"><span>실전 대미지</span>${ok?`<b>${f1(raw*mult(F,ac))}</b><small>방어로 ${Math.round((1-mult(F,ac))*100)}% 감소 (실측 보정)</small>`:`<b class="dc-un">미확인</b><small>방어 공식 실측 보정 필요 ↓</small>`}</div>
+    </div>`;
+    if(ok){ const Ls=[0,100,200,300]; h+=`<div class="scroll"><table class="gtab"><thead><tr><th>상대 방어력 육성</th>${Ls.map(L=>`<th class="num">${L}강</th>`).join('')}</tr></thead><tbody><tr><td>이 공격 실전 대미지</td>${Ls.map(L=>`<td class="num">${f1(raw*mult(F,dac+defAC(L)))}</td>`).join('')}</tr></tbody></table></div>`; }
+    g('dc-out').innerHTML=h;
+    const preds=ok?F.pts:null;
+    g('dc-cal').innerHTML=`<thead><tr><th>기본 대미지</th><th>공격력 육성</th><th>상대 장비 방어</th><th>상대 방어 육성</th><th>상태 배율</th><th>실측 피해</th><th>보정식 예측</th><th></th></tr></thead><tbody>${
+      cal.map((p,i)=>{ const acp=num(p.dac)+defAC(clampL(p.dl)), rawp=p.base*(1+atkPct(clampL(p.al))/100)*num(p.st,1);
+        return `<tr data-i="${i}">${['base','al','dac','dl','st','hit'].map(f=>`<td><input data-f="${f}" type="number" step="any" value="${p[f]??''}" inputmode="decimal"></td>`).join('')}<td class="num">${ok&&p.hit>0?f1(rawp*mult(F,acp)):'—'}</td><td><button type="button" data-del="${i}" aria-label="삭제">✕</button></td></tr>`; }).join('')
+      || '<tr><td colspan="8" class="gper">아직 실측이 없음 — 위에서 공격·상대를 고른 뒤 "현재 선택으로 실측 줄 추가"를 누르고 실측 피해를 적으세요.</td></tr>'}</tbody>`;
+  }
+  g('dc-cal').addEventListener('change',e=>{ const t=e.target; const tr=t.closest('tr[data-i]'); if(!tr||!t.dataset.f) return; cal[+tr.dataset.i][t.dataset.f]=num(t.value); save(); render(); });
+  g('dc-cal').addEventListener('click',e=>{ const b=e.target.closest('[data-del]'); if(!b) return; cal.splice(+b.dataset.del,1); save(); render(); });
+  g('dc-add').addEventListener('click',()=>{ cal.push({base:num(g('dc-aa').value),al:clampL(g('dc-al').value),dac:num(g('dc-dac').value),dl:clampL(g('dc-dl').value),st:num(g('dc-st').value,1),hit:0}); save(); render(); });
+  g('dc-clear').addEventListener('click',()=>{ cal=[]; save(); render(); });
+  g('dc-am').addEventListener('change',()=>{ fillAtk(); render(); });
+  g('dc-dm').addEventListener('change',()=>{ fillDef(); render(); });
+  ['dc-aa','dc-al','dc-dac','dc-dl','dc-st'].forEach(id=>g(id).addEventListener('input',render));
+  g('dc-aa').addEventListener('change',render); g('dc-st').addEventListener('change',render);
+  const d0=groups.indexOf('011'); if(d0>=0) g('dc-am').value='011'; fillAtk(); render();
+})();
 </script>
 <div class="cdtip" id="cdtip" hidden></div>
 <script>
