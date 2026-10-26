@@ -109,6 +109,16 @@ th.num{text-align:right}
 .cd-p.cd-diff{border-color:var(--g-r)}
 .cd-ok{font-style:normal;font-size:10.5px;color:var(--muted)}
 .cdtip-n{opacity:.8;font-size:11px}
+.growth{margin:14px 0 4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 12px}
+.growth summary{cursor:pointer;padding:11px 0;font-weight:700;color:var(--ink)}
+.growth summary small{font-weight:400;color:var(--muted);margin-left:6px}
+.gtab{font-size:12.5px;width:100%;border-collapse:collapse;margin-bottom:8px}
+.gtab th,.gtab td{padding:6px 8px;border-top:1px solid var(--line);white-space:nowrap;text-align:left}
+.gtab th.num,.gtab td.num{text-align:right;font-variant-numeric:tabular-nums}
+.gtab small{color:var(--muted)}
+.gtab .gu{background:color-mix(in srgb,var(--gold) 18%,transparent)}
+.gtab .gper{color:var(--muted);font-size:11.5px}
+.gnote{font-size:12px;color:var(--muted);line-height:1.6;padding:0 0 12px}
 .spx{margin-top:6px;display:grid;gap:3px;font-size:12px;padding:6px 8px;border-left:3px solid var(--gold);background:var(--steel-soft);border-radius:0 4px 4px 0}
 .spx b{color:var(--ink);margin-right:4px}
 #lv{width:110px}
@@ -171,6 +181,11 @@ th.num{text-align:right}
     <div><b>가드 넉백</b> 막았을 때 밀리는 정도 · <b>방어파괴</b> 막아도 가드가 깨지는 공격 (방어가능은 막을 수 있음)</div>
   </div>
 
+  <details class="growth" id="growth-box">
+    <summary>육성 효과표 <small>100강 · 200강 · 300강에서 실제로 오르는 양</small></summary>
+    <div class="scroll"><table class="gtab" id="growth"></table></div>
+    <div class="gnote">구간 안에서는 1강마다 같은 양씩 오르고, 100강·200강을 넘으면 1강당 오르는 양만 줄어듦 (게임 육성 설정 기준). 실제 값은 소수점까지 계속 올라 <b>죽은 구간이 없음</b> — 쿨타임이 정수 초로 보여 계단처럼 보일 뿐. 쿨타임은 아빠킹 실측과 평균 0.2초 차이로 검증, 공격력·방어력의 실제 피해 반영은 미검증. 위 <b>육성 수치</b> 칸에 숫자를 넣으면 그 수치 열이 추가됨.</div>
+  </details>
   <div id="out"></div>
   <nav class="pager" id="pager" aria-label="페이지" hidden></nav>
 </div>
@@ -402,6 +417,22 @@ function alignHeads(root){ root.querySelectorAll('table').forEach(t => { const r
 new MutationObserver(() => alignHeads($('#out'))).observe($('#out'), {childList:true, subtree:true});
 document.addEventListener('toggle', e => { if (e.target.tagName==='DETAILS') alignHeads(e.target); }, true);
 render();
+// ---- 육성 효과표 ----
+const GROW=[['공격력',[70,65,50],v=>'+'+v.toFixed(1)+'%'],
+ ['쿨타임 감소',[90,70,50],v=>v.toFixed(1)+'% <small>(쿨 ×'+(1/(1+v/100)).toFixed(2)+')</small>'],
+ ['이동속도',[40,30,22],v=>'+'+v.toFixed(1)+'%'],
+ ['드랍피해감소',[225,175,125],v=>'받는 드랍피해 '+Math.round(100/(1+v/100))+'%'],
+ ['방어력 (기본 육성)',[200,120,120],v=>'방어 수치 +'+v.toFixed(1)]];
+const growV=(L,s)=>(s[0]*Math.min(L,100)+s[1]*Math.min(Math.max(L-100,0),100)+s[2]*Math.max(L-200,0))/300;
+function growthTable(){ const t=document.getElementById('growth'); if(!t) return;
+  const lvv=$('#lv').value.trim(); const cols=[0,50,100,150,200,250,300];
+  let U=null; if(lvv!==''){ U=Math.max(0,Math.min(300,Math.round(+lvv))); if(!cols.includes(U)) cols.push(U); cols.sort((a,b)=>a-b); }
+  const per=s=>s.map(x=>(x/300).toFixed(x/300<1?2:1)).join(' / ');
+  t.innerHTML=`<thead><tr><th>육성</th>${cols.map(c=>`<th class="num${c===U?' gu':''}">${c}강</th>`).join('')}<th>1강당 (0~100 / ~200 / ~300)</th></tr></thead><tbody>${
+   GROW.map(([n,s,f])=>`<tr><td><b>${n}</b></td>${cols.map(c=>`<td class="num${c===U?' gu':''}">${f(growV(c,s))}</td>`).join('')}<td class="gper">${per(s)}</td></tr>`).join('')
+  }<tr><td><b>게이지 40 장비 쿨</b></td>${cols.map(c=>`<td class="num${c===U?' gu':''}">${(0.638*40/(1+growV(c,[90,70,50])/100)).toFixed(1)}초</td>`).join('')}<td class="gper">0.638 × 게이지 ÷ (1+쿨감%)</td></tr></tbody>`; }
+$('#lv').addEventListener('input', growthTable);
+growthTable();
 </script>
 <div class="cdtip" id="cdtip" hidden></div>
 <script>
