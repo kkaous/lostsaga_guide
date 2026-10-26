@@ -390,7 +390,9 @@ function pager(pages){
   box.innerHTML = html + btn(page+1, '다음 ›', 'nav');
 }
 $('#pager').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (!b || b.disabled) return;
-  page = +b.dataset.p; render(); $('#count').scrollIntoView({ behavior:'smooth', block:'start' }); });
+  page = +b.dataset.p; render();
+  const top = $('#out').getBoundingClientRect().top + window.scrollY - $('.controls').offsetHeight - 12;
+  window.scrollTo({ top: Math.max(0, top), behavior:'smooth' }); });
 // 표 머리글을 데이터 정렬(숫자=오른쪽)에 맞춤
 function alignHeads(root){ root.querySelectorAll('table').forEach(t => { const r = t.querySelector('tbody tr:not(.fxrow)'); if (!r) return;
   const tds = r.children; t.querySelectorAll('thead th').forEach((th, k) => { if (tds[k] && tds[k].classList.contains('num')) th.classList.add('num'); }); }); }
