@@ -123,6 +123,7 @@ th.num{text-align:right}
 .dc-grid fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 12px 12px;margin:0;display:grid;gap:8px;min-width:0}
 .dc-grid legend{font-weight:700;font-size:13px;padding:0 4px}
 .dc-grid label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.dc-grid input[type=search]{margin-bottom:4px}
 .dc-grid select,.dc-grid input,.dc-cal input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
 .dc-steps{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
 .dc-steps>div{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:110px;background:var(--bg)}
@@ -209,12 +210,12 @@ th.num{text-align:right}
     <summary>대미지 계산기 <small>공격력 육성 → 상대 방어까지 반영한 실전 대미지</small></summary>
     <div class="dc-grid">
       <fieldset><legend>공격</legend>
-        <label>용병·장비<select id="dc-am"></select></label>
+        <label>용병·장비<input id="dc-amq" type="search" placeholder="검색 (이름·번호·장비·스킬·약칭)" autocomplete="off"><select id="dc-am"></select></label>
         <label>동작<select id="dc-aa"></select></label>
         <label>공격력 육성<input id="dc-al" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
       </fieldset>
       <fieldset><legend>상대</legend>
-        <label>용병 (장비 방어 자동 입력)<select id="dc-dm"></select></label>
+        <label>용병 (장비 방어 자동 입력)<input id="dc-dmq" type="search" placeholder="검색 (이름·번호·약칭)" autocomplete="off"><select id="dc-dm"></select></label>
         <label>장비 방어 수치 합<input id="dc-dac" type="number" step="0.5" value="0" inputmode="decimal"></label>
         <label>방어력 육성<input id="dc-dl" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
         <label>상대 상태<select id="dc-st"><option value="1">서 있음 (×1)</option><option value="0.5">쓰러진 상태 (×0.5)</option><option value="0.5">공중에 뜬 상태 (×0.5)</option><option value="0.5">빙결 상태 (×0.5)</option><option value="0.5">가드 중 스킬에 맞음 (×0.5)</option></select></label>
@@ -483,13 +484,21 @@ growthTable();
   const groups=[...new Set(D.blocks.map(b=>b[0]))].filter(k=>D.m[k]);
   const ord=k=>/^\d+$/.test(k)?[0,+k]:[1,nm(k)];
   groups.sort((a,b)=>{const x=ord(a),y=ord(b);return x[0]-y[0]||(x[0]?String(x[1]).localeCompare(y[1],'ko'):x[1]-y[1]);});
-  g('dc-am').innerHTML=groups.map(k=>`<option value="${esc(k)}">${/^\d+$/.test(k)?k+' ':''}${esc(nm(k))}${/^\d+$/.test(k)?'':' ('+esc((D.m[k].match(/^\[([^\]]*)\]/)||['',''])[1])+')'}</option>`).join('');
+  const aLab=k=>`${/^\d+$/.test(k)?k+' ':''}${nm(k)}${/^\d+$/.test(k)?'':' ('+(D.m[k].match(/^\[([^\]]*)\]/)||['',''])[1]+')'}`;
+  const aTxt={}; groups.forEach(k=>{ aTxt[k]=[k,D.m[k],...D.items.filter(i=>i[0]===k).map(i=>i[3]+' '+i[8])].join(' '); });
+  function fillSel(sel,keys,lab,txt,q){ const cur=sel.value, qs=q.trim()?expandQuery(q):null;
+    const ks=qs?keys.filter(k=>hit(txt[k],qs)):keys;
+    sel.innerHTML=ks.map(k=>`<option value="${esc(k)}">${esc(lab(k))}</option>`).join('')||'<option value="">검색 결과 없음</option>';
+    if(ks.includes(cur)) sel.value=cur; return sel.value!==cur; }
+  fillSel(g('dc-am'),groups,aLab,aTxt,'');
   function fillAtk(){ const k=g('dc-am').value; const opts=[];
     D.blocks.filter(b=>b[0]===k).forEach(b=>b[3].forEach(([lab,id])=>{ const a=D.attrs[String(id)]; if(!a||!(a[0]>0)) return;
       opts.push(`<option value="${a[0]}">${esc(b[1])} · ${esc(lab)} — 대미지 ${a[0]}</option>`); }));
     g('dc-aa').innerHTML=opts.join('')||'<option value="0">대미지 있는 동작 없음</option>'; }
   const mercs=Object.keys(D.m).filter(k=>/^\d+$/.test(k)).sort((a,b)=>a-b);
-  g('dc-dm').innerHTML='<option value="">직접 입력</option>'+mercs.map(k=>`<option value="${k}">${k} ${esc(D.m[k])}</option>`).join('');
+  const dKeys=['',...mercs], dTxt={'':'직접 입력'}; mercs.forEach(k=>{ dTxt[k]=[k,D.m[k],...D.items.filter(i=>i[0]===k).map(i=>i[3])].join(' '); });
+  const dLab=k=>k?`${k} ${D.m[k]}`:'직접 입력';
+  fillSel(g('dc-dm'),dKeys,dLab,dTxt,'');
   function fillDef(){ const k=g('dc-dm').value; if(!k) return; let sum=0;
     ['무기','갑옷','투구','망토'].forEach(sl=>{ const r=D.items.find(i=>i[0]===k&&i[2]===sl&&/^기본/.test(i[1])); if(r&&r[6]!=null) sum+=+r[6]; });
     g('dc-dac').value=sum; }
@@ -534,6 +543,8 @@ growthTable();
   g('dc-add').addEventListener('click',()=>{ cal.push({base:num(g('dc-aa').value),al:clampL(g('dc-al').value),dac:num(g('dc-dac').value),dl:clampL(g('dc-dl').value),st:num(g('dc-st').value,1),hit:0}); save(); render(); });
   g('dc-clear').addEventListener('click',()=>{ cal=[]; save(); render(); });
   g('dc-am').addEventListener('change',()=>{ fillAtk(); render(); });
+  g('dc-amq').addEventListener('input',e=>{ fillSel(g('dc-am'),groups,aLab,aTxt,e.target.value); fillAtk(); render(); });
+  g('dc-dmq').addEventListener('input',e=>{ if(fillSel(g('dc-dm'),dKeys,dLab,dTxt,e.target.value)) fillDef(); render(); });
   g('dc-dm').addEventListener('change',()=>{ fillDef(); render(); });
   ['dc-aa','dc-al','dc-dac','dc-dl','dc-st'].forEach(id=>g(id).addEventListener('input',render));
   g('dc-aa').addEventListener('change',render); g('dc-st').addEventListener('change',render);
