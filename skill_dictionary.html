@@ -123,6 +123,8 @@ th.num{text-align:right}
 .dc-grid fieldset{border:1px solid var(--line);border-radius:8px;padding:8px 12px 12px;margin:0;display:grid;gap:8px;min-width:0}
 .dc-grid legend{font-weight:700;font-size:13px;padding:0 4px}
 .dc-grid label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.dc-grid label small{font-size:11px}
+.dc-grid input:disabled{opacity:.45}
 .dc-grid input[type=search]{margin-bottom:4px}
 .dc-grid select,.dc-grid input,.dc-cal input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
 .dc-steps{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
@@ -215,9 +217,14 @@ th.num{text-align:right}
         <label>공격력 육성<input id="dc-al" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
       </fieldset>
       <fieldset><legend>상대</legend>
-        <label>용병 (장비 방어 자동 입력)<input id="dc-dmq" type="search" placeholder="검색 (이름·번호·약칭)" autocomplete="off"><select id="dc-dm"></select></label>
-        <label>장비 방어 수치 합<input id="dc-dac" type="number" step="0.5" value="0" inputmode="decimal"></label>
+        <label>용병 (무기 방어는 용병 기본 무기)<input id="dc-dmq" type="search" placeholder="검색 (이름·번호·약칭)" autocomplete="off"><select id="dc-dm"></select></label>
+        <label>장비 검색 <small>(갑옷·투구·망토 목록을 함께 거름)</small><input id="dc-eq" type="search" placeholder="예: 신비갑, 퓨리갑, 릴리모, 글키망" autocomplete="off"></label>
+        <label>갑옷<select id="dc-ea"></select></label>
+        <label>투구<select id="dc-eh"></select></label>
+        <label>망토<select id="dc-ec"></select></label>
+        <label>장비 방어 수치 합 <small id="dc-dach"></small><input id="dc-dac" type="number" step="0.5" value="0" inputmode="decimal"></label>
         <label>방어력 육성<input id="dc-dl" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+        <label>갑옷 육성 <small id="dc-agh"></small><input id="dc-ag" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
         <label>상대 상태<select id="dc-st"><option value="1">서 있음 (×1)</option><option value="0.5">쓰러진 상태 (×0.5)</option><option value="0.5">공중에 뜬 상태 (×0.5)</option><option value="0.5">빙결 상태 (×0.5)</option><option value="0.5">가드 중 스킬에 맞음 (×0.5)</option></select></label>
       </fieldset>
     </div>
@@ -227,7 +234,7 @@ th.num{text-align:right}
       <div class="scroll"><table class="gtab" id="dc-cal"></table></div>
       <div class="dc-btns"><button type="button" id="dc-add">현재 선택으로 실측 줄 추가</button><button type="button" id="dc-clear">실측 전부 지우기</button></div>
     </details>
-    <div class="gnote">기본 대미지 = 게임 설정의 동작 대미지. 공격력 육성은 대미지 × (1 + 공격력%)로 적용(설정 주석 기준, 미검증). 방어 수치 = 장비 방어 합 + 방어력 육성(100강 +66.7 · 200강 +106.7 · 300강 +146.7). 상태 배율은 게임 설정값. 방어 공식은 게임 파일에 없어 실측 보정 전에는 "방어 0 기준"만 표시.</div>
+    <div class="gnote">기본 대미지 = 게임 설정의 동작 대미지. 갑옷 육성은 육성 항목이 "방어력"인 갑옷(패시브 갑옷·기사왕의 갑옷)만 절반이 방어력 육성에 더해짐. 공격력 육성은 대미지 × (1 + 공격력%)로 적용(설정 주석 기준, 미검증). 방어 수치 = 장비 방어 합 + 방어력 육성(100강 +66.7 · 200강 +106.7 · 300강 +146.7). 상태 배율은 게임 설정값. 방어 공식은 게임 파일에 없어 실측 보정 전에는 "방어 0 기준"만 표시.</div>
   </details>
   <div id="out"></div>
   <nav class="pager" id="pager" aria-label="페이지" hidden></nav>
@@ -499,14 +506,32 @@ growthTable();
   const dKeys=['',...mercs], dTxt={'':'직접 입력'}; mercs.forEach(k=>{ dTxt[k]=[k,D.m[k],...D.items.filter(i=>i[0]===k).map(i=>i[3])].join(' '); });
   const dLab=k=>k?`${k} ${D.m[k]}`:'직접 입력';
   fillSel(g('dc-dm'),dKeys,dLab,dTxt,'');
-  function fillDef(){ const k=g('dc-dm').value; if(!k) return; let sum=0;
-    ['무기','갑옷','투구','망토'].forEach(sl=>{ const r=D.items.find(i=>i[0]===k&&i[2]===sl&&/^기본/.test(i[1])); if(r&&r[6]!=null) sum+=+r[6]; });
-    g('dc-dac').value=sum; }
+  // 상대 장비 (갑옷·투구·망토 선택)
+  const SL=[['갑옷','dc-ea'],['투구','dc-eh'],['망토','dc-ec']];
+  const owner=i=>/^\d+$/.test(i[0])?(D.m[i[0]]||i[0]):((String(D.m[i[0]]||'').match(/^\[([^\]\s]*)/)||['',''])[1]||'레어');
+  const eLab=k=>{ const i=D.items[k]; return `${i[3].split(' / ')[0]} · ${owner(i)} · 방어 ${fmt(i[6])}${i[11]==='방어력'?' · 방어력 육성':''}`; };
+  const eKeys={}, eTxt={};
+  SL.forEach(([sl])=>{ eKeys[sl]=[]; D.items.forEach((i,k)=>{ if(i[2]===sl&&i[6]!=null&&!/소환|모드/.test(i[1])){ eKeys[sl].push(String(k)); eTxt[k]=[i[3],owner(i),i[8],D.m[i[0]]||''].join(' '); } });
+    eKeys[sl].sort((x,y)=>{ const a=D.items[x],b=D.items[y], na=/^\d+$/.test(a[0]), nb=/^\d+$/.test(b[0]); return na!==nb?(na?-1:1):na?(+a[0]-+b[0]):a[3].localeCompare(b[3],'ko'); }); });
+  const fillEq=q=>{ const qs=(q||'').trim()?expandQuery(q):null; SL.forEach(([sl,id])=>{ if(qs&&!eKeys[sl].some(k=>hit(eTxt[k],qs))) return; fillSel(g(id),eKeys[sl],eLab,eTxt,q||''); }); };
+  fillEq('');
+  let wAC=0;
+  const armorRow=()=>D.items[+g('dc-ea').value];
+  function updDac(){ let sum=wAC; SL.forEach(([sl,id])=>{ const r=D.items[+g(id).value]; if(r&&r[6]!=null) sum+=+r[6]; });
+    g('dc-dac').value=sum; const ar=armorRow(), ok=ar&&ar[11]==='방어력';
+    g('dc-dach').textContent=`(무기 ${fmt(wAC)} + 갑옷·투구·망토)`;
+    g('dc-ag').disabled=!ok; g('dc-agh').textContent= ok ? '(이 갑옷은 육성의 절반이 방어력 육성으로 더해짐)' : '(이 갑옷은 육성이 방어력에 반영 안 됨)'; }
+  function fillDef(){ const k=g('dc-dm').value; if(!k){ wAC=0; updDac(); return; }
+    const w=D.items.find(i=>i[0]===k&&i[2]==='무기'&&/^기본/.test(i[1])); wAC=w&&w[6]!=null?+w[6]:0;
+    g('dc-eq').value=''; fillEq('');
+    SL.forEach(([sl,id])=>{ const kk=D.items.findIndex(i=>i[0]===k&&i[2]===sl&&/^기본/.test(i[1])); if(kk>=0) g(id).value=String(kk); });
+    updDac(); }
+  const agBonus=()=>{ const ar=armorRow(); return ar&&ar[11]==='방어력' ? clampL(g('dc-ag').value)/2 : 0; };
   const KEY='ls-dmg-cal'; let cal=[];
   try{ cal=JSON.parse(localStorage.getItem(KEY)||'[]')||[]; }catch(e){ cal=[]; }
   const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(cal)); }catch(e){} };
   const num=(v,d=0)=>{ const x=parseFloat(v); return isFinite(x)?x:d; };
-  const clampL=v=>Math.max(0,Math.min(300,num(v)));
+  const clampL=v=>Math.max(0,Math.min(450,num(v)));
   function fit(){ const pts=cal.filter(p=>p.hit>0&&p.base>0).map(p=>{ const ac=num(p.dac)+defAC(clampL(p.dl)); const raw=p.base*(1+atkPct(clampL(p.al))/100)*num(p.st,1); return {ac,r:p.hit/raw}; });
     if(!pts.length) return null;
     if(pts.length===1){ const {ac,r}=pts[0]; if(!(ac>0&&r<1&&r>0)) return {err:'실측 1개일 때는 상대 방어가 0보다 크고, 피해가 방어 0 기준보다 작아야 함',n:1}; return {c:1,K:ac/(1/r-1),n:1,pts}; }
@@ -518,7 +543,7 @@ growthTable();
   const mult=(F,ac)=>F.c/(1+ac/F.K);
   const f1=x=>(Math.round(x*10)/10).toFixed(1);
   function render(){
-    const base=num(g('dc-aa').value), al=clampL(g('dc-al').value), dl=clampL(g('dc-dl').value), dac=num(g('dc-dac').value), st=num(g('dc-st').value,1);
+    const base=num(g('dc-aa').value), al=clampL(g('dc-al').value), dl0=clampL(g('dc-dl').value), bon=agBonus(), dl=dl0+bon, dac=num(g('dc-dac').value), st=num(g('dc-st').value,1);
     const ap=atkPct(al), raw=base*(1+ap/100)*st, ac=dac+defAC(dl), F=fit();
     const ok=F&&!F.err;
     g('dc-calst').textContent = !F ? '(실측 없음)' : F.err ? '(보정 불가: '+F.err+')' : `(실측 ${F.n}개 · c=${F.c.toFixed(3)} · K=${F.K.toFixed(1)})`;
@@ -527,28 +552,31 @@ growthTable();
       <div><span>공격력 육성 ${al}강</span><b>+${ap.toFixed(1)}%</b></div>
       ${st!==1?`<div><span>상대 상태</span><b>×${st}</b></div>`:''}
       <div><span>방어 0 기준</span><b>${f1(raw)}</b></div>
-      <div><span>상대 방어 수치</span><b>${f1(ac)}</b><small>장비 ${dac} + 육성 ${f1(defAC(dl))}</small></div>
+      <div><span>상대 방어 수치</span><b>${f1(ac)}</b><small>장비 ${fmt(dac)} + 육성 ${f1(defAC(dl))}${bon?` (방어력 ${dl0}강 + 갑옷 ${bon}강)`:''}</small></div>
       <div class="dc-final"><span>실전 대미지</span>${ok?`<b>${f1(raw*mult(F,ac))}</b><small>방어로 ${Math.round((1-mult(F,ac))*100)}% 감소 (실측 보정)</small>`:`<b class="dc-un">미확인</b><small>방어 공식 실측 보정 필요 ↓</small>`}</div>
     </div>`;
-    if(ok){ const Ls=[0,100,200,300]; h+=`<div class="scroll"><table class="gtab"><thead><tr><th>상대 방어력 육성</th>${Ls.map(L=>`<th class="num">${L}강</th>`).join('')}</tr></thead><tbody><tr><td>이 공격 실전 대미지</td>${Ls.map(L=>`<td class="num">${f1(raw*mult(F,dac+defAC(L)))}</td>`).join('')}</tr></tbody></table></div>`; }
+    if(ok){ const Ls=[0,100,200,300]; h+=`<div class="scroll"><table class="gtab"><thead><tr><th>상대 방어력 육성</th>${Ls.map(L=>`<th class="num">${L}강</th>`).join('')}</tr></thead><tbody><tr><td>이 공격 실전 대미지</td>${Ls.map(L=>`<td class="num">${f1(raw*mult(F,dac+defAC(L+bon)))}</td>`).join('')}</tr></tbody></table></div>`; }
     g('dc-out').innerHTML=h;
     const preds=ok?F.pts:null;
-    g('dc-cal').innerHTML=`<thead><tr><th>기본 대미지</th><th>공격력 육성</th><th>상대 장비 방어</th><th>상대 방어 육성</th><th>상태 배율</th><th>실측 피해</th><th>보정식 예측</th><th></th></tr></thead><tbody>${
+    g('dc-cal').innerHTML=`<thead><tr><th>기본 대미지</th><th>공격력 육성</th><th>상대 장비 방어</th><th>상대 방어 육성<br><small>(갑옷 절반 포함)</small></th><th>상태 배율</th><th>실측 피해</th><th>보정식 예측</th><th></th></tr></thead><tbody>${
       cal.map((p,i)=>{ const acp=num(p.dac)+defAC(clampL(p.dl)), rawp=p.base*(1+atkPct(clampL(p.al))/100)*num(p.st,1);
         return `<tr data-i="${i}">${['base','al','dac','dl','st','hit'].map(f=>`<td><input data-f="${f}" type="number" step="any" value="${p[f]??''}" inputmode="decimal"></td>`).join('')}<td class="num">${ok&&p.hit>0?f1(rawp*mult(F,acp)):'—'}</td><td><button type="button" data-del="${i}" aria-label="삭제">✕</button></td></tr>`; }).join('')
       || '<tr><td colspan="8" class="gper">아직 실측이 없음 — 위에서 공격·상대를 고른 뒤 "현재 선택으로 실측 줄 추가"를 누르고 실측 피해를 적으세요.</td></tr>'}</tbody>`;
   }
   g('dc-cal').addEventListener('change',e=>{ const t=e.target; const tr=t.closest('tr[data-i]'); if(!tr||!t.dataset.f) return; cal[+tr.dataset.i][t.dataset.f]=num(t.value); save(); render(); });
   g('dc-cal').addEventListener('click',e=>{ const b=e.target.closest('[data-del]'); if(!b) return; cal.splice(+b.dataset.del,1); save(); render(); });
-  g('dc-add').addEventListener('click',()=>{ cal.push({base:num(g('dc-aa').value),al:clampL(g('dc-al').value),dac:num(g('dc-dac').value),dl:clampL(g('dc-dl').value),st:num(g('dc-st').value,1),hit:0}); save(); render(); });
+  g('dc-add').addEventListener('click',()=>{ cal.push({base:num(g('dc-aa').value),al:clampL(g('dc-al').value),dac:num(g('dc-dac').value),dl:clampL(g('dc-dl').value)+agBonus(),st:num(g('dc-st').value,1),hit:0}); save(); render(); });
   g('dc-clear').addEventListener('click',()=>{ cal=[]; save(); render(); });
   g('dc-am').addEventListener('change',()=>{ fillAtk(); render(); });
   g('dc-amq').addEventListener('input',e=>{ fillSel(g('dc-am'),groups,aLab,aTxt,e.target.value); fillAtk(); render(); });
   g('dc-dmq').addEventListener('input',e=>{ if(fillSel(g('dc-dm'),dKeys,dLab,dTxt,e.target.value)) fillDef(); render(); });
+  g('dc-eq').addEventListener('input',e=>{ fillEq(e.target.value); updDac(); render(); });
+  SL.forEach(([,id])=>g(id).addEventListener('change',()=>{ updDac(); render(); }));
+  g('dc-ag').addEventListener('input',render);
   g('dc-dm').addEventListener('change',()=>{ fillDef(); render(); });
   ['dc-aa','dc-al','dc-dac','dc-dl','dc-st'].forEach(id=>g(id).addEventListener('input',render));
   g('dc-aa').addEventListener('change',render); g('dc-st').addEventListener('change',render);
-  const d0=groups.indexOf('011'); if(d0>=0) g('dc-am').value='011'; fillAtk(); render();
+  const d0=groups.indexOf('011'); if(d0>=0) g('dc-am').value='011'; fillAtk(); fillDef(); render();
 })();
 </script>
 <div class="cdtip" id="cdtip" hidden></div>
