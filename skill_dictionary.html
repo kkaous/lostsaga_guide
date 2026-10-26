@@ -125,6 +125,11 @@ th.num{text-align:right}
 .dc-grid label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
 .dc-grid label small{font-size:11px}
 .dc-grid input:disabled{opacity:.45}
+.dc-grid input.dc-sq{font-size:12px;padding:4px 8px;margin-bottom:3px}
+.dc-eqst{color:var(--muted);line-height:1.5}
+.dc-eqst.miss{color:var(--g-r)}
+.dc-sum{font-size:12.5px;color:var(--muted);padding:6px 10px;border:1px dashed var(--line);border-radius:6px}
+.dc-sum b{font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
 .dc-grid input[type=search]{margin-bottom:4px}
 .dc-grid select,.dc-grid input,.dc-cal input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
 .dc-steps{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
@@ -218,11 +223,11 @@ th.num{text-align:right}
       </fieldset>
       <fieldset><legend>상대</legend>
         <label>용병 (무기 방어는 용병 기본 무기)<input id="dc-dmq" type="search" placeholder="검색 (이름·번호·약칭)" autocomplete="off"><select id="dc-dm"></select></label>
-        <label>장비 검색 <small>(갑옷·투구·망토 목록을 함께 거름)</small><input id="dc-eq" type="search" placeholder="예: 신비갑, 퓨리갑, 릴리모, 글키망" autocomplete="off"></label>
-        <label>갑옷<select id="dc-ea"></select></label>
-        <label>투구<select id="dc-eh"></select></label>
-        <label>망토<select id="dc-ec"></select></label>
-        <label>장비 방어 수치 합 <small id="dc-dach"></small><input id="dc-dac" type="number" step="0.5" value="0" inputmode="decimal"></label>
+        <label>장비 한 번에 입력 <small>(쉼표로 구분 · 갑옷·투구·망토 자동 배치)</small><input id="dc-eq" type="search" placeholder="예: 기사갑, 러백모, 현무망" autocomplete="off"><small id="dc-eqst" class="dc-eqst"></small></label>
+        <label>갑옷<input id="dc-eaq" class="dc-sq" type="search" placeholder="갑옷 검색" autocomplete="off"><select id="dc-ea"></select></label>
+        <label>투구<input id="dc-ehq" class="dc-sq" type="search" placeholder="투구 검색" autocomplete="off"><select id="dc-eh"></select></label>
+        <label>망토<input id="dc-ecq" class="dc-sq" type="search" placeholder="망토 검색" autocomplete="off"><select id="dc-ec"></select></label>
+        <div class="dc-sum">장비 방어 수치 합 <b id="dc-dacv">0</b> <small id="dc-dach"></small><input id="dc-dac" type="hidden" value="0"></div>
         <label>방어력 육성<input id="dc-dl" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
         <label>갑옷 육성 <small id="dc-agh"></small><input id="dc-ag" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
         <label>상대 상태<select id="dc-st"><option value="1">서 있음 (×1)</option><option value="0.5">쓰러진 상태 (×0.5)</option><option value="0.5">공중에 뜬 상태 (×0.5)</option><option value="0.5">빙결 상태 (×0.5)</option><option value="0.5">가드 중 스킬에 맞음 (×0.5)</option></select></label>
@@ -513,17 +518,30 @@ growthTable();
   const eKeys={}, eTxt={};
   SL.forEach(([sl])=>{ eKeys[sl]=[]; D.items.forEach((i,k)=>{ if(i[2]===sl&&i[6]!=null&&!/소환|모드/.test(i[1])){ eKeys[sl].push(String(k)); eTxt[k]=[i[3],owner(i),i[8],D.m[i[0]]||''].join(' '); } });
     eKeys[sl].sort((x,y)=>{ const a=D.items[x],b=D.items[y], na=/^\d+$/.test(a[0]), nb=/^\d+$/.test(b[0]); return na!==nb?(na?-1:1):na?(+a[0]-+b[0]):a[3].localeCompare(b[3],'ko'); }); });
-  const fillEq=q=>{ const qs=(q||'').trim()?expandQuery(q):null; SL.forEach(([sl,id])=>{ if(qs&&!eKeys[sl].some(k=>hit(eTxt[k],qs))) return; fillSel(g(id),eKeys[sl],eLab,eTxt,q||''); }); };
-  fillEq('');
+  const fillEq=()=>SL.forEach(([sl,id])=>{ g(id+'q').value=''; fillSel(g(id),eKeys[sl],eLab,eTxt,''); });
+  fillEq();
+  const HINT=[[/(갑|의상|갑옷|슈트|아머|로브)$/,'갑옷'],[/(모|투|투구|모자|헬멧|서클릿|써클릿|고글|마스크|두건|머리띠|머리장식|링)$/,'투구'],[/(망|망토|장신구|날개|꼬리)$/,'망토']];
+  function applyMulti(q){ const terms=(q||'').split(/[,，、]+/).map(t=>t.trim()).filter(Boolean), got=[], miss=[];
+    terms.forEach(t=>{ const qs=expandQuery(t), nq=nz(t);
+      const cand=SL.map(([sl,id])=>{ const ks=eKeys[sl].filter(k=>hit(eTxt[k],qs));
+        const exact=ks.find(k=>D.items[k][3].split(' / ').some(n=>nz(base(n))===nq||nz(n)===nq));
+        return {sl,id,ks,pick:exact||ks[0]}; }).filter(c=>c.ks.length);
+      if(!cand.length){ miss.push(t); return; }
+      const h=(HINT.find(([re])=>re.test(t))||[])[1];
+      const c=cand.find(c=>c.sl===h)||cand.sort((a,b)=>a.ks.length-b.ks.length)[0];
+      g(c.id+'q').value=''; fillSel(g(c.id),eKeys[c.sl],eLab,eTxt,''); g(c.id).value=c.pick;
+      got.push(`${c.sl} ${D.items[c.pick][3].split(' / ')[0]}`); });
+    g('dc-eqst').textContent = terms.length ? (got.length?'인식: '+got.join(' · '):'')+(miss.length?(got.length?'  /  ':'')+'못 찾음: '+miss.join(', ')+' → 아래 칸에서 직접 검색':'') : '';
+    g('dc-eqst').classList.toggle('miss',miss.length>0); }
   let wAC=0;
   const armorRow=()=>D.items[+g('dc-ea').value];
   function updDac(){ let sum=wAC; SL.forEach(([sl,id])=>{ const r=D.items[+g(id).value]; if(r&&r[6]!=null) sum+=+r[6]; });
-    g('dc-dac').value=sum; const ar=armorRow(), ok=ar&&ar[11]==='방어력';
+    g('dc-dac').value=sum; g('dc-dacv').textContent=fmt(sum); const ar=armorRow(), ok=ar&&ar[11]==='방어력';
     g('dc-dach').textContent=`(무기 ${fmt(wAC)} + 갑옷·투구·망토)`;
     g('dc-ag').disabled=!ok; g('dc-agh').textContent= ok ? '(이 갑옷은 육성의 절반이 방어력 육성으로 더해짐)' : '(이 갑옷은 육성이 방어력에 반영 안 됨)'; }
   function fillDef(){ const k=g('dc-dm').value; if(!k){ wAC=0; updDac(); return; }
     const w=D.items.find(i=>i[0]===k&&i[2]==='무기'&&/^기본/.test(i[1])); wAC=w&&w[6]!=null?+w[6]:0;
-    g('dc-eq').value=''; fillEq('');
+    g('dc-eq').value=''; g('dc-eqst').textContent=''; fillEq();
     SL.forEach(([sl,id])=>{ const kk=D.items.findIndex(i=>i[0]===k&&i[2]===sl&&/^기본/.test(i[1])); if(kk>=0) g(id).value=String(kk); });
     updDac(); }
   const agBonus=()=>{ const ar=armorRow(); return ar&&ar[11]==='방어력' ? clampL(g('dc-ag').value)/2 : 0; };
@@ -570,7 +588,8 @@ growthTable();
   g('dc-am').addEventListener('change',()=>{ fillAtk(); render(); });
   g('dc-amq').addEventListener('input',e=>{ fillSel(g('dc-am'),groups,aLab,aTxt,e.target.value); fillAtk(); render(); });
   g('dc-dmq').addEventListener('input',e=>{ if(fillSel(g('dc-dm'),dKeys,dLab,dTxt,e.target.value)) fillDef(); render(); });
-  g('dc-eq').addEventListener('input',e=>{ fillEq(e.target.value); updDac(); render(); });
+  g('dc-eq').addEventListener('input',e=>{ applyMulti(e.target.value); updDac(); render(); });
+  SL.forEach(([sl,id])=>g(id+'q').addEventListener('input',e=>{ fillSel(g(id),eKeys[sl],eLab,eTxt,e.target.value); updDac(); render(); }));
   SL.forEach(([,id])=>g(id).addEventListener('change',()=>{ updDac(); render(); }));
   g('dc-ag').addEventListener('input',render);
   g('dc-dm').addEventListener('change',()=>{ fillDef(); render(); });
