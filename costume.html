@@ -232,9 +232,12 @@ function resize(){ const r = stage.getBoundingClientRect(); if (!r.width || !r.h
   renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(stage); resize();
 const clock = new THREE.Clock(), pulseMats = [];
+let lastT = null;
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
-  for (const m of pulseMats) m.opacity = 0.75 + 0.25 * Math.sin(t * 3);
+  const dt = Math.min(0.05, t - (lastT ?? t)); lastT = t;
+  for (const m of pulseMats) m.opacity = (0.75 + 0.25 * Math.sin(t * 3)) * (m.userData.base ?? 1);
+  if (state.fx) updateFx(dt);
   camAnim(); controls.update(); renderer.render(scene, camera);
 });
 
@@ -288,11 +291,18 @@ async function buildModel(file, mats, forceSkin){
     const info = mats[parseInt((o.material.name || 'm0').slice(1)) || 0] || {};
     const orig = info.texFile ? await loadTex(info.texFile).catch(() => null) : null;
     let mat;
+    const tex0 = info.scroll && orig ? scrolled(orig, info.scroll) : orig;
     if (info.blend === 'add'){
       const e = info.emissive || [1,1,1];
-      mat = new THREE.MeshBasicMaterial({ map:glowTexture(orig), color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
+      mat = new THREE.MeshBasicMaterial({ map: info.scroll ? scrolled(glowTexture(orig), info.scroll) : glowTexture(orig), color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
         transparent:true, depthWrite:false, side:THREE.DoubleSide });
       pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
+    } else if (info.unlit && !info.skin && !forceSkin){
+      // 스스로 빛나는 재질(emissive 1): 명암 없이 텍스처 그대로
+      mat = new THREE.MeshBasicMaterial({ map:tex0, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (info.alpha && info.blend !== 'normal'){ mat.transparent = true; mat.depthWrite = false; }
+      else if (info.alpha && info.cutout) mat.alphaTest = 0.5;
+      if (info.outline) addOutline(o, info);
     } else {
       const isSkin = forceSkin || !!info.skin;
       mat = new THREE.MeshToonMaterial({ map: isSkin ? skinTexture(orig, SKIN()) : orig, gradientMap:toonRamp,
@@ -303,8 +313,127 @@ async function buildModel(file, mats, forceSkin){
       if (info.outline) addOutline(o, info);
     }
     o.material = mat;
+    // 재질의 추가 빛 패스 (예: 아케인 스피넬 몸의 빛나는 무늬) → 같은 모양 위에 겹쳐 그림
+    for (const gl of info.glow || []){
+      const gt = await loadTex(gl.texFile).catch(() => null); if (!gt) continue;
+      const gm = new THREE.MeshBasicMaterial({ map: gl.scroll ? scrolled(glowTexture(gt), gl.scroll) : glowTexture(gt),
+        transparent:true, depthWrite:false, side:mat.side, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2 });
+      if (gl.pulse) pulseMats.push(gm);
+      const ov = new THREE.Mesh(o.geometry, gm); ov.userData.fx = true; ov.visible = state.fx; o.add(ov);
+    }
   }
   return g;
+}
+
+/* ───────── 장착 이펙트 (파티클 · 이펙트 모델) ─────────
+   게임의 이펙트 파일을 단순화해서 흉내 냄 — 뼈 위치 + 오프셋에 파티클을 뿌리고 크기·색·투명도 변화를 따라감 */
+const FLIP = new THREE.Matrix4().makeScale(1, 1, -1);
+const PLANE = new THREE.PlaneGeometry(1, 1);
+const fxSystems = [], scrollers = [];
+function scrolled(t, sc){ const c = t.clone(); c.needsUpdate = true; c.wrapS = c.wrapT = THREE.RepeatWrapping; scrollers.push({ t:c, u:sc[0], v:sc[1] }); return c; }
+const keyAt = (keys, t) => {
+  if (!keys?.length) return null;
+  if (t <= keys[0][0]) return keys[0].slice(1);
+  for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]){
+    const a = keys[i-1], b = keys[i], k = (t - a[0]) / ((b[0] - a[0]) || 1);
+    return a.slice(1).map((v, j) => v + (b[j+1] - v) * k);
+  }
+  return keys[keys.length - 1].slice(1);
+};
+const rnd = r => r[0] + Math.random() * ((r[1] ?? r[0]) - r[0]);
+function boneMat(name){
+  const b = state.db.bones?.[name] || state.db.bones?.['bip01'], m = new THREE.Matrix4();
+  if (b) m.set(...b); return m;
+}
+// 게임 좌표(왼손) 변환 M → three 좌표: FLIP·M·FLIP
+const toThree = m => FLIP.clone().multiply(m).multiply(FLIP);
+const gq = q => new THREE.Quaternion(q[0], q[1], q[2], q[3]);
+async function buildFx(list){
+  const out = new THREE.Group(); out.userData.fx = true; out.visible = state.fx;
+  for (const e of list || []){
+    const G = new THREE.Group(); G.matrixAutoUpdate = false;
+    G.matrix.copy(toThree(boneMat(e.bone).multiply(new THREE.Matrix4().compose(new THREE.Vector3(...e.pos), gq(e.rot).normalize(), new THREE.Vector3(1,1,1)))));
+    const sys = { e, G, parts:[], acc:0 };
+    if (e.kind === 'm'){
+      // 이펙트 모델: 시작 회전·크기 그대로 고정해 둠
+      const model = await buildModel(e.file, e.materials).catch(() => null); if (!model) continue;
+      model.traverse(o => { if (o.isMesh && !o.userData.outline) o.userData.fx = true; });
+      const sc = keyAt(e.scale, 0) || [1,1,1];
+      const r = new THREE.Matrix4();
+      if (e.srot) r.makeRotationAxis(new THREE.Vector3(e.srot[0], e.srot[1], e.srot[2]).normalize(), THREE.MathUtils.degToRad(e.srot[3]));
+      const m = new THREE.Matrix4().makeTranslation(...e.epos).multiply(r).multiply(new THREE.Matrix4().makeScale(sc[0], sc[1], sc[2]));
+      model.matrixAutoUpdate = false; model.matrix.copy(toThree(m));
+      G.add(model);
+    } else {
+      const t = await loadTex(e.texFile).catch(() => null); if (!t) continue;
+      sys.sub = e.blend.includes('sub');
+      sys.map = glowTexture(t);
+      // 처음 모습: 미리 몇 초 돌려 둠 (마법진처럼 천천히 나타나는 것도 바로 보이게)
+      for (let i = 0; i < Math.min(e.start, e.quota); i++) spawn(sys);
+      const pre = Math.min(Math.max(e.life[0], e.life[1] ?? 0) / 1000 * 0.47, 5);
+      for (let k = 0; k < pre * 20; k++) stepFx(sys, 0.05, false);
+    }
+    out.add(G); fxSystems.push(sys);
+  }
+  return out;
+}
+function spawn(s){
+  const e = s.e, alive = s.parts.filter(p => !p.dead).length;
+  if (alive >= Math.min(e.quota || 10, 150)) return;
+  let p = s.parts.find(q => q.dead);
+  if (!p){
+    const mat = new THREE.MeshBasicMaterial({ map:s.map, transparent:true, depthWrite:false, side:THREE.DoubleSide, color: s.sub ? 0x000000 : 0xffffff });
+    p = { mesh:new THREE.Mesh(PLANE, mat) }; s.G.add(p.mesh); s.parts.push(p);
+  }
+  const a = e.area || [0,0,0];
+  p.pos = new THREE.Vector3(e.epos[0] + (Math.random() - .5) * a[0], e.epos[1] + (Math.random() - .5) * a[1], e.epos[2] + (Math.random() - .5) * a[2]);
+  const dir = new THREE.Vector3(...e.edir).normalize();
+  if (e.eangle > 0){
+    const ang = THREE.MathUtils.degToRad(e.eangle) * Math.random(), perp = new THREE.Vector3(1,0,0).cross(dir);
+    if (perp.lengthSq() < 1e-6) perp.set(0,0,1).cross(dir);
+    dir.applyAxisAngle(perp.normalize().applyAxisAngle(dir, Math.random() * Math.PI * 2), ang);
+  }
+  p.vel = dir.multiplyScalar(rnd(e.speed));
+  p.age = 0; p.life = Math.max(50, rnd(e.life)); p.dead = false;
+  p.w = rnd(e.w); p.h = rnd(e.h);
+  p.rot = THREE.MathUtils.degToRad(e.texrot ? rnd(e.texrot.range) : (e.tex0 ? rnd(e.tex0) : 0));
+  p.rs = e.texrot ? rnd(e.texrot.speed) : 0;
+  p.mesh.visible = true;
+}
+const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _z = new THREE.Vector3(0,0,1), _c = new THREE.Color();
+function stepFx(s, dt, orient = true){
+  const e = s.e;
+  if (e.kind === 'm') return;
+  s.acc += (e.rate || 0) * dt;
+  while (s.acc >= 1){ s.acc -= 1; spawn(s); }
+  let camQ = null;
+  if (orient){ s.G.updateWorldMatrix(true, false); s.G.getWorldQuaternion(_q2).invert(); camQ = _q2.multiply(camera.quaternion); }
+  const fixed = e.bb !== 'point' && e.fixed, base = fixed ? new THREE.Quaternion().setFromUnitVectors(_z, new THREE.Vector3(e.cdir[0], e.cdir[1], -e.cdir[2]).normalize()) : null;
+  for (const p of s.parts){
+    if (p.dead) continue;
+    p.age += dt * 1000;
+    const t = p.age / p.life;
+    if (t >= 1){ p.dead = true; p.mesh.visible = false; continue; }
+    if (e.force) p.vel.x += e.force[0] * dt, p.vel.y += e.force[1] * dt, p.vel.z += e.force[2] * dt;
+    p.pos.addScaledVector(p.vel, dt);
+    p.rot += p.rs * dt;
+    const sc = keyAt(e.scale, t) || [1,1], col = keyAt(e.color, t) || [255,255,255], al = (keyAt(e.alpha, t) || [1])[0];
+    p.mesh.position.set(p.pos.x, p.pos.y, -p.pos.z);
+    p.mesh.scale.set(p.w * sc[0], p.h * (sc[1] ?? sc[0]), 1);
+    if (fixed) p.mesh.quaternion.copy(base).multiply(_q.setFromAxisAngle(_z, p.rot));
+    else if (camQ) p.mesh.quaternion.copy(camQ).multiply(_q.setFromAxisAngle(_z, p.rot));
+    const k = e.m2x ? 2 / 255 : 1 / 255, m = p.mesh.material;
+    if (s.sub){ m.opacity = Math.min(1, al * (col[0] + col[1] + col[2]) / 765 * 2.5); }
+    else { m.color.setRGB(Math.min(1, col[0] * k), Math.min(1, col[1] * k), Math.min(1, col[2] * k)); m.opacity = Math.max(0, Math.min(1, al)); }
+  }
+}
+function updateFx(dt){
+  for (const sc of scrollers){ sc.t.offset.x += sc.u * dt; sc.t.offset.y += sc.v * dt; }
+  for (const s of fxSystems){
+    let o = s.G, vis = true;
+    while (o){ if (!o.visible){ vis = false; break; } o = o.parent; }
+    if (vis) stepFx(s, dt);
+  }
 }
 
 /* ───────── 캐릭터 ───────── */
@@ -424,7 +553,8 @@ function renderPartbar(){
   }
 }
 const itemParts = it => (state.gender === 'w' && it.w) ? it.w : it.m;
-const hasModel = it => (it.m || []).length > 0;
+const fxList = it => (state.gender === 'w' && it.fx?.w) || it.fx?.m || [];
+const hasModel = it => (it.m || []).length > 0 || ((it.fx?.m || []).length > 0);
 const visibleParts = () => state.view === 'all' ? partsOf(state.pack) : [state.view];
 
 let token = 0;
@@ -457,11 +587,13 @@ async function rebuild(reset){
   const p = state.pack, gd = state.gender, my = ++token;
   $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
   try {
-    pulseMats.length = 0; outlines.length = 0;
+    pulseMats.length = 0; outlines.length = 0; fxSystems.length = 0; scrollers.length = 0;
     const [chars, ...groups] = await Promise.all([getChar(gd), ...PARTS.map(async k => {
       const it = p.items[k]; if (!it) return null;
       const gs = await Promise.all(itemParts(it).map(async pt => { const g = await buildModel(pt.file, pt.materials); g.userData.role = pt.role; return g; }));
-      const grp = new THREE.Group(); gs.forEach(g => grp.add(g)); grp.userData.part = k; return grp; })]);
+      const grp = new THREE.Group(); gs.forEach(g => grp.add(g)); grp.userData.part = k;
+      const fl = fxList(it); if (fl.length) grp.add(await buildFx(fl));
+      return grp; })]);
     if (my !== token) return;
     charGroup.clear(); chars.forEach(g => charGroup.add(g));
     itemGroup.clear(); PARTS.forEach((k, i) => { loaded[k] = groups[i]; if (groups[i]) itemGroup.add(groups[i]); });
