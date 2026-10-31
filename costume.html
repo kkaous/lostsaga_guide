@@ -88,6 +88,8 @@ a{color:inherit}
 .viewer{overflow:hidden}
 @media (min-width:901px){.viewer{position:sticky;top:12px}}
 .stage{position:relative;height:min(68vh,640px);min-height:380px;background:var(--stage);border-radius:12px 12px 0 0;touch-action:none}
+.stage.night{background:#262c34}
+.stage.night .stage-title b{color:#eef2f6}.stage.night .stage-title span{color:#b3bdc9}
 .stage canvas{display:block;width:100%;height:100%;border-radius:12px 12px 0 0;cursor:grab}
 .stage canvas:active{cursor:grabbing}
 .stage-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
@@ -161,7 +163,7 @@ a{color:inherit}
   </section>
 
   <section class="card viewer" aria-label="3D 미리보기">
-    <div class="stage" id="stage">
+    <div class="stage night" id="stage">
       <div class="stage-title" id="stitle" hidden><b id="sname"></b><span id="ssub"></span></div>
       <div class="stage-msg" id="smsg">코스튬 목록을 불러오는 중…</div>
       <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
@@ -179,6 +181,8 @@ a{color:inherit}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>외곽선</button>
       <button class="tb" id="tFx" aria-pressed="true" title="빛나는 효과(이펙트) 표시">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>이펙트</button>
+      <button class="tb" id="tNight" aria-pressed="true" title="이펙트는 게임처럼 빛을 더하는 방식이라 밝은 배경에선 하얗게 떠 보여요">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>어두운 배경</button>
       <span class="tb-sep"></span>
       <button class="tb" id="tFront" title="정면에서 보기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>정면</button>
@@ -236,7 +240,8 @@ let lastT = null;
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
   const dt = Math.min(0.05, t - (lastT ?? t)); lastT = t;
-  for (const m of pulseMats) m.opacity = (0.75 + 0.25 * Math.sin(t * 3)) * (m.userData.base ?? 1);
+  // 재질 color_xform (예: emissive sine base freq phase amp) — 게임 값 그대로
+  for (const m of pulseMats){ const [b, f, ph, a] = m.userData.wave; const v = Math.max(0, b + a * Math.sin(2 * Math.PI * (f * t + ph))); m.color.setRGB(v, v, v); }
   if (state.fx) updateFx(dt);
   camAnim(); controls.update(); renderer.render(scene, camera);
 });
@@ -293,10 +298,11 @@ async function buildModel(file, mats, forceSkin){
     let mat;
     const tex0 = info.scroll && orig ? scrolled(orig, info.scroll) : orig;
     if (info.blend === 'add'){
-      const e = info.emissive || [1,1,1];
-      mat = new THREE.MeshBasicMaterial({ map: info.scroll ? scrolled(glowTexture(orig), info.scroll) : glowTexture(orig), color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
-        transparent:true, depthWrite:false, side:THREE.DoubleSide });
-      pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
+      // 게임과 같은 가산 혼합 (scene_blend add)
+      mat = new THREE.MeshBasicMaterial({ map:tex0, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+        side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (info.wave){ mat.userData.wave = info.wave; pulseMats.push(mat); }
+      o.userData.fx = true; o.visible = state.fx;
     } else if (info.unlit && !info.skin && !forceSkin){
       // 스스로 빛나는 재질(emissive 1): 명암 없이 텍스처 그대로
       mat = new THREE.MeshBasicMaterial({ map:tex0, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
@@ -316,9 +322,9 @@ async function buildModel(file, mats, forceSkin){
     // 재질의 추가 빛 패스 (예: 아케인 스피넬 몸의 빛나는 무늬) → 같은 모양 위에 겹쳐 그림
     for (const gl of info.glow || []){
       const gt = await loadTex(gl.texFile).catch(() => null); if (!gt) continue;
-      const gm = new THREE.MeshBasicMaterial({ map: gl.scroll ? scrolled(glowTexture(gt), gl.scroll) : glowTexture(gt),
+      const gm = new THREE.MeshBasicMaterial({ map: gl.scroll ? scrolled(gt, gl.scroll) : gt, blending:THREE.AdditiveBlending,
         transparent:true, depthWrite:false, side:mat.side, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2 });
-      if (gl.pulse) pulseMats.push(gm);
+      if (gl.wave){ gm.userData.wave = gl.wave; pulseMats.push(gm); }
       const ov = new THREE.Mesh(o.geometry, gm); ov.userData.fx = true; ov.visible = state.fx; o.add(ov);
     }
   }
@@ -367,7 +373,7 @@ async function buildFx(list){
     } else {
       const t = await loadTex(e.texFile).catch(() => null); if (!t) continue;
       sys.sub = e.blend.includes('sub');
-      sys.map = glowTexture(t);
+      sys.map = t;
       // 처음 모습: 미리 몇 초 돌려 둠 (마법진처럼 천천히 나타나는 것도 바로 보이게)
       for (let i = 0; i < Math.min(e.start, e.quota); i++) spawn(sys);
       const pre = Math.min(Math.max(e.life[0], e.life[1] ?? 0) / 1000 * 0.47, 5);
@@ -382,7 +388,11 @@ function spawn(s){
   if (alive >= Math.min(e.quota || 10, 150)) return;
   let p = s.parts.find(q => q.dead);
   if (!p){
-    const mat = new THREE.MeshBasicMaterial({ map:s.map, transparent:true, depthWrite:false, side:THREE.DoubleSide, color: s.sub ? 0x000000 : 0xffffff });
+    // render_type add = 가산(src_alpha, one) / rev_subtract = 빼기(바탕 − 이펙트)
+    const mat = new THREE.MeshBasicMaterial({ map:s.map, transparent:true, depthWrite:false, side:THREE.DoubleSide });
+    if (s.sub){ mat.blending = THREE.CustomBlending; mat.blendEquation = THREE.ReverseSubtractEquation; mat.blendSrc = THREE.SrcAlphaFactor; mat.blendDst = THREE.OneFactor;
+      mat.blendEquationAlpha = THREE.AddEquation; mat.blendSrcAlpha = THREE.ZeroFactor; mat.blendDstAlpha = THREE.OneFactor; }  // 화면 투명도는 그대로
+    else if (e.blend === 'add') mat.blending = THREE.AdditiveBlending;
     p = { mesh:new THREE.Mesh(PLANE, mat) }; s.G.add(p.mesh); s.parts.push(p);
   }
   const a = e.area || [0,0,0];
@@ -408,7 +418,12 @@ function stepFx(s, dt, orient = true){
   while (s.acc >= 1){ s.acc -= 1; spawn(s); }
   let camQ = null;
   if (orient){ s.G.updateWorldMatrix(true, false); s.G.getWorldQuaternion(_q2).invert(); camQ = _q2.multiply(camera.quaternion); }
-  const fixed = e.bb !== 'point' && e.fixed, base = fixed ? new THREE.Quaternion().setFromUnitVectors(_z, new THREE.Vector3(e.cdir[0], e.cdir[1], -e.cdir[2]).normalize()) : null;
+  // billboard point = 카메라를 봄 / common + none_billboard = common_dir 이 면의 방향(고정) / common = common_dir 축을 세운 채 카메라 쪽으로 돎
+  const cd = new THREE.Vector3(e.cdir[0], e.cdir[1], -e.cdir[2]).normalize();
+  const fixed = e.bb !== 'point' && e.fixed, axial = e.bb !== 'point' && !e.fixed;
+  const base = fixed ? new THREE.Quaternion().setFromUnitVectors(_z, cd) : null;
+  let camL = null;
+  if (axial && orient){ s.G.updateWorldMatrix(true, false); camL = s.G.worldToLocal(camera.position.clone()); }
   for (const p of s.parts){
     if (p.dead) continue;
     p.age += dt * 1000;
@@ -421,10 +436,13 @@ function stepFx(s, dt, orient = true){
     p.mesh.position.set(p.pos.x, p.pos.y, -p.pos.z);
     p.mesh.scale.set(p.w * sc[0], p.h * (sc[1] ?? sc[0]), 1);
     if (fixed) p.mesh.quaternion.copy(base).multiply(_q.setFromAxisAngle(_z, p.rot));
+    else if (axial && camL){
+      const toC = camL.clone().sub(p.mesh.position), right = new THREE.Vector3().crossVectors(cd, toC).normalize(), nrm = new THREE.Vector3().crossVectors(right, cd);
+      p.mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, cd, nrm)).multiply(_q.setFromAxisAngle(_z, p.rot));
+    }
     else if (camQ) p.mesh.quaternion.copy(camQ).multiply(_q.setFromAxisAngle(_z, p.rot));
     const k = e.m2x ? 2 / 255 : 1 / 255, m = p.mesh.material;
-    if (s.sub){ m.opacity = Math.min(1, al * (col[0] + col[1] + col[2]) / 765 * 2.5); }
-    else { m.color.setRGB(Math.min(1, col[0] * k), Math.min(1, col[1] * k), Math.min(1, col[2] * k)); m.opacity = Math.max(0, Math.min(1, al)); }
+    m.color.setRGB(col[0] * k, col[1] * k, col[2] * k); m.opacity = Math.max(0, Math.min(1, al));
   }
 }
 function updateFx(dt){
@@ -671,6 +689,7 @@ $('#tSpin').onclick = e => { state.spin = !state.spin; e.currentTarget.setAttrib
 $('#tOutline').onclick = e => { state.outline = !state.outline; e.currentTarget.setAttribute('aria-pressed', state.outline);
   root.traverse(o => { if (o.userData.outline) o.visible = state.outline; }); };
 $('#tFx').onclick = e => { state.fx = !state.fx; e.currentTarget.setAttribute('aria-pressed', state.fx); applyVisibility(); };
+$('#tNight').onclick = e => { const on = stage.classList.toggle('night'); e.currentTarget.setAttribute('aria-pressed', on); syncBg(); };
 $('#tFront').onclick = () => look(1);
 $('#tBack').onclick = () => look(-1);
 $('#tShot').onclick = () => {
