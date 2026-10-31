@@ -177,6 +177,8 @@ a{color:inherit}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>자동 회전</button>
       <button class="tb" id="tOutline" aria-pressed="true" title="게임처럼 외곽선 표시">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>외곽선</button>
+      <button class="tb" id="tFx" aria-pressed="true" title="빛나는 효과(이펙트) 표시">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>이펙트</button>
       <span class="tb-sep"></span>
       <button class="tb" id="tFront" title="정면에서 보기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>정면</button>
@@ -204,7 +206,7 @@ const DATA = 'costume_data/';
 const PARTS = ['helmet', 'armor', 'cloak'];
 const PART_KO = { helmet:'투구', armor:'갑옷', cloak:'망토' };
 const $ = s => document.querySelector(s);
-const state = { db:null, pack:null, view:'all', gender:'m', showChar:true, outline:true, spin:true, filter:'all', shown:0 };
+const state = { db:null, pack:null, view:'all', gender:'m', showChar:true, outline:true, fx:true, spin:true, filter:'all', shown:0 };
 
 /* ───────── 3D 기본 ───────── */
 const stage = $('#stage');
@@ -290,7 +292,7 @@ async function buildModel(file, mats, forceSkin){
       const e = info.emissive || [1,1,1];
       mat = new THREE.MeshBasicMaterial({ map:glowTexture(orig), color:new THREE.Color(Math.max(e[0],.35), Math.max(e[1],.35), Math.max(e[2],.35)),
         transparent:true, depthWrite:false, side:THREE.DoubleSide });
-      pulseMats.push(mat);
+      pulseMats.push(mat); o.userData.fx = true; o.visible = state.fx;
     } else {
       const isSkin = forceSkin || !!info.skin;
       mat = new THREE.MeshToonMaterial({ map: isSkin ? skinTexture(orig, SKIN()) : orig, gradientMap:toonRamp,
@@ -485,6 +487,7 @@ function applyVisibility(){
       && !(r === 'hair' && hideHair) && !(r === 'face' && hideFace);
   }
   for (const k of PARTS) if (loaded[k]) loaded[k].visible = vis.has(k);
+  itemGroup.traverse(o => { if (o.userData.fx) o.visible = state.fx; });
 }
 
 /* ───────── 카메라 ───────── */
@@ -535,6 +538,7 @@ $('#tChar').onclick = e => { state.showChar = !state.showChar; e.currentTarget.s
 $('#tSpin').onclick = e => { state.spin = !state.spin; e.currentTarget.setAttribute('aria-pressed', state.spin); controls.autoRotate = state.spin; };
 $('#tOutline').onclick = e => { state.outline = !state.outline; e.currentTarget.setAttribute('aria-pressed', state.outline);
   root.traverse(o => { if (o.userData.outline) o.visible = state.outline; }); };
+$('#tFx').onclick = e => { state.fx = !state.fx; e.currentTarget.setAttribute('aria-pressed', state.fx); applyVisibility(); };
 $('#tFront').onclick = () => look(1);
 $('#tBack').onclick = () => look(-1);
 $('#tShot').onclick = () => {
