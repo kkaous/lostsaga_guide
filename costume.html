@@ -319,6 +319,19 @@ async function buildModel(file, mats, forceSkin){
       if (info.outline) addOutline(o, info);
     }
     o.material = mat;
+    // 반사광 패스 (게임 AnimateSpecular): 반사광 텍스처 × specular 색 × 세기 × (N·H)^power 를 더함 — 이펙트 아님(항상 표시)
+    if (info.spec){
+      const st = await loadTex(info.spec.texFile).catch(() => null);
+      if (st){
+        const c = info.spec.color.map(v => v * info.spec.lv);
+        const sm = new THREE.ShaderMaterial({
+          uniforms:{ map:{ value:st }, sc:{ value:new THREE.Vector3(...c) }, pw:{ value:info.spec.power }, L:{ value:new THREE.Vector3(1, 2, 1.5).normalize() } },
+          vertexShader:'varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+          fragmentShader:'uniform sampler2D map; uniform vec3 sc; uniform float pw; uniform vec3 L; varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; vec3 h = normalize(L + normalize(vV)); float s = pow(max(dot(n, h), 0.), pw); gl_FragColor = vec4(texture2D(map, vUv).rgb * sc * s, 1.); }',
+          transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:mat.side, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2 });
+        o.add(new THREE.Mesh(o.geometry, sm));
+      }
+    }
     // 재질의 추가 빛 패스 (예: 아케인 스피넬 몸의 빛나는 무늬) → 같은 모양 위에 겹쳐 그림
     for (const gl of info.glow || []){
       const gt = await loadTex(gl.texFile).catch(() => null); if (!gt) continue;
