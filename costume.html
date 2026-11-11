@@ -361,7 +361,8 @@ const keyAt = (keys, t) => {
 };
 const rnd = r => r[0] + Math.random() * ((r[1] ?? r[0]) - r[0]);
 function boneMat(name){
-  const b = state.db.bones?.[name] || state.db.bones?.['bip01'], m = new THREE.Matrix4();
+  const B = (state.pack?.pose && state.db.poses?.[state.pack.pose]?.bones) || state.db.bones;
+  const b = B?.[name] || B?.['bip01'], m = new THREE.Matrix4();
   if (b) m.set(...b); return m;
 }
 // 게임 좌표(왼손) 변환 M → three 좌표: FLIP·M·FLIP
@@ -470,13 +471,15 @@ function updateFx(dt){
 /* ───────── 캐릭터 ───────── */
 const charCache = {};
 function getChar(gd){
-  const ch = (gd === 'w' && state.db.characterW) || state.db.character;
+  // 패키지가 다른 자세(예: 프리미엄 메카닉 = 메카닉 서 있는 자세)를 쓰면 캐릭터도 그 자세로
+  const P = state.pack?.pose && state.db.poses?.[state.pack.pose], src = P || state.db;
+  const ch = (gd === 'w' && src.characterW) || src.character, key = gd + (P ? '@' + state.pack.pose : '');
   if (!ch) return Promise.resolve([]);
-  if (!charCache[gd]) charCache[gd] = Promise.all(ch.parts.map(async p => {
+  if (!charCache[key]) charCache[key] = Promise.all(ch.parts.map(async p => {
     // 얼굴·손은 맨살 합성, 머리카락·기본 옷은 텍스처 그대로
     const g = await buildModel(p.file, p.materials, false);
     g.userData.role = p.role; return g; }));
-  return charCache[gd];
+  return charCache[key];
 }
 
 /* ───────── 데이터 · 목록 ───────── */
