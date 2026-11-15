@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>치장 미리보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --panel-2:#e3e8ee; --ink:#18212b; --muted:#56606d;
+  --line:#cdd4dc; --steel:#2f4a66; --gold:#9a6a0c; --gold-soft:#f3e3bf; --warn:#b4362b; --ok:#2f7a4a;
+  --stage:#dfe5eb;
+  --display:"Black Han Sans","Noto Sans KR",system-ui,sans-serif;
+  --body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#1a2129; --panel-2:#232c36; --ink:#e7ebf0; --muted:#9aa5b2;
+  --line:#2f3a46; --steel:#8fb2d6; --gold:#e3b24d; --gold-soft:#3a2f17; --warn:#f07a6e; --ok:#6fcf97;
+  --stage:#1d252e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#1a2129; --panel-2:#232c36; --ink:#e7ebf0; --muted:#9aa5b2;
+  --line:#2f3a46; --steel:#8fb2d6; --gold:#e3b24d; --gold-soft:#3a2f17; --warn:#f07a6e; --ok:#6fcf97;
+  --stage:#1d252e; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+a{color:inherit}
+
+/* 사이트 공용 메뉴 */
+.sitenav{border-bottom:1px solid var(--line);background:var(--panel)}
+.sitenav-in{margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;min-height:52px}
+.sitenav-brand{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:17px;color:var(--ink);text-decoration:none;letter-spacing:.3px;margin-right:auto;padding:12px 0}
+.sitenav-brand b{color:var(--gold);font-weight:400}
+.sitenav-links{display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:0;list-style:none}
+.sitenav-links a{display:block;padding:7px 12px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap}
+.sitenav-links a:hover{color:var(--ink);background:color-mix(in srgb,var(--line) 45%,transparent)}
+.sitenav-links a[aria-current=page]{color:var(--panel);background:var(--steel);font-weight:700}
+@media (max-width:520px){.sitenav-brand{margin-right:0;width:100%;padding:12px 0 2px}.sitenav-links{padding-bottom:10px}.sitenav-links a{padding:6px 9px;font-size:12.5px}}
+
+/* 머리말 */
+.head{max-width:1300px;margin:0 auto;padding:20px 16px 8px}
+.head h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;letter-spacing:.5px}
+.head h1 b{color:var(--gold);font-weight:400}
+.head p{margin:6px 0 0;color:var(--muted);font-size:13.5px}
+.warn{display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;padding:10px 14px;border-radius:10px;
+  background:color-mix(in srgb,var(--warn) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);color:var(--ink);font-size:13.5px;line-height:1.55}
+.warn svg{width:20px;height:20px;flex:none;color:var(--warn);margin-top:1px}
+.warn b{color:var(--warn)}
+
+
+/* 2단 레이아웃 */
+.app{max-width:1300px;margin:0 auto;padding:12px 16px 40px;display:grid;grid-template-columns:380px minmax(0,1fr);gap:14px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+
+/* 고르기 패널 */
+.picker{position:sticky;top:12px;display:flex;flex-direction:column;max-height:calc(100vh - 24px)}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:10px 10px 0}
+.tabs button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:7px 4px;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.tabs button:hover{color:var(--ink);border-color:var(--steel)}
+.tabs button[aria-selected=true]{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700}
+.tools{display:flex;gap:8px;align-items:center;padding:10px 12px 8px}
+.search{position:relative;display:block;flex:1;min-width:0}
+.search input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px 8px 32px;outline:none}
+.search input:focus{border-color:var(--steel)}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+.chk input{margin:0;accent-color:var(--steel)}
+.grid{list-style:none;margin:0;padding:2px 10px 10px;overflow:auto;flex:1;min-height:160px;display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;align-content:start}
+.grid button{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;border:1px solid transparent;background:var(--panel-2);border-radius:10px;padding:7px 4px 6px;cursor:pointer;min-width:0}
+.grid button:hover{border-color:var(--steel)}
+.grid button[aria-selected=true]{border-color:var(--gold);background:var(--gold-soft);box-shadow:0 0 0 1px var(--gold)}
+.grid .ic{width:52px;height:52px;display:grid;place-items:center}
+.grid .ic img{max-width:52px;max-height:52px;object-fit:contain}
+.grid .sw{width:40px;height:40px;border-radius:50%;border:3px solid;margin:6px}
+.grid .nm{font-size:11.5px;line-height:1.3;text-align:center;word-break:keep-all;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.6em}
+.grid .off{position:absolute;top:3px;right:3px;font-size:10px;line-height:1;padding:3px 4px;border-radius:5px;background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.count{font-size:12px;color:var(--muted);padding:0 14px 10px}
+
+/* 뷰어 */
+.viewer{overflow:hidden}
+@media (min-width:901px){.viewer{position:sticky;top:12px}}
+.stage{position:relative;height:min(64vh,600px);min-height:360px;background:var(--stage);border-radius:12px 12px 0 0;touch-action:none}
+.stage.night{background:#262c34}
+.stage canvas{display:block;width:100%;height:100%;border-radius:12px 12px 0 0;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.stage-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
+.stage.night .stage-msg{color:#b3bdc9}
+.chatbox{margin:0 12px 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.chat-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font-size:13px}
+.chat-h span{color:var(--muted);font-size:12px}
+.chat-view{background:#262c34;display:flex;justify-content:center;align-items:center;padding:6px;min-height:90px;overflow:auto}
+.chat-view canvas{display:block;image-rendering:auto}
+.chatbar{display:flex;gap:6px;align-items:center;padding:8px 12px}
+.chatbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;outline:none}
+.chatbar input:focus{border-color:var(--steel)}
+.hint{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--panel) 70%,transparent);padding:2px 8px;border-radius:6px}
+
+/* 지금 고른 것 */
+.cur{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px;border-top:1px solid var(--line)}
+.pbtn{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:7px 10px;cursor:pointer;text-align:left;min-width:0}
+.pbtn:hover{border-color:var(--steel)}
+.pbtn[aria-pressed=true]{border-color:var(--gold);background:var(--gold-soft);box-shadow:0 0 0 1px var(--gold)}
+.pbtn .pi{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--panel-2)}
+.pbtn .pi img{max-width:40px;max-height:40px;object-fit:contain}
+.pbtn .pi .sw{width:26px;height:26px;border-radius:50%;border:3px solid}
+.pbtn .pt{min-width:0;line-height:1.3}
+.pbtn .pt b{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.pbtn .pt small{display:block;font-size:13px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px;align-items:center}
+.tb{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;white-space:nowrap}
+.tb:hover{border-color:var(--steel)}
+.tb[aria-pressed=true]{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:700}
+.tb svg{width:15px;height:15px}
+.tb-sep{flex:1}
+.seg{display:inline-flex}
+.seg .tb{border-radius:0;margin-left:-1px}
+.seg .tb:first-child{border-radius:8px 0 0 8px;margin-left:0}
+.seg .tb:last-child{border-radius:0 8px 8px 0}
+
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .picker{position:static;max-height:none}
+  .grid{max-height:420px}
+  .viewer{order:-1}
+  .stage{height:auto;aspect-ratio:1/1;min-height:0}
+  .head h1{font-size:23px}
+  .hint{display:none}
+}
+@media (max-width:560px){
+  .cur{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+}
+</style>
+</head>
+<body>
+<nav class="sitenav" aria-label="사이트 메뉴" data-noexport><div class="sitenav-in" style="max-width:1300px"><a class="sitenav-brand" href="index.html">LOSTSAGA <b>공략</b></a><ul class="sitenav-links"><li><a href="index.html">용병 / 장비 라인업</a></li><li><a href="skill_dictionary.html">장비·기술 수치 사전</a></li><li><a href="pet_medal.html">펫 / 메달</a></li><li><a href="geardesign.html">장비 스킨 제작</a></li><li><a href="costume.html">코스튬 미리보기</a></li><li><a href="face.html" aria-current=page>치장 미리보기</a></li></ul></div></nav>
+
+<header class="head">
+  <h1>치장 <b>미리보기</b></h1>
+  <div class="warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
+    <span><b>주의!</b> 해당 자료는 "미리보기" 입니다. 인게임과 차이가 있을 수 있어요. 치장 조합을 고를 때 참고용으로만 사용하세요!</span></div>
+  <p>얼굴 표정·머리 모양·머리색·피부색을 바꿔 가며 캐릭터 얼굴을 3D로 볼 수 있어요. 채팅할 때 말풍선 옆에 뜨는 작은 얼굴도 같이 볼 수 있어요. 고른 조합은 주소에 저장돼서 그대로 공유할 수 있어요.</p>
+</header>
+
+<main class="app">
+  <section class="card picker" aria-label="치장 고르기">
+    <div class="tabs" id="tabs" role="tablist" aria-label="치장 종류">
+      <button role="tab" data-t="face" aria-selected="true">얼굴 표정</button>
+      <button role="tab" data-t="hair" aria-selected="false">머리 모양</button>
+      <button role="tab" data-t="hairColor" aria-selected="false">머리색</button>
+      <button role="tab" data-t="skin" aria-selected="false">피부색</button>
+    </div>
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="이름, 초성 (예: 언데드, ㅇㄷㄷ)" autocomplete="off" aria-label="치장 검색">
+      </label>
+      <label class="chk" title="상점에서 지금 파는 치장만 보기"><input type="checkbox" id="onlyShop">판매 중만</label>
+    </div>
+    <ul class="grid" id="grid" role="listbox" aria-label="치장 목록"></ul>
+    <div class="count" id="count"></div>
+  </section>
+
+  <section class="card viewer" aria-label="3D 미리보기">
+    <div class="stage night" id="stage">
+      <div class="stage-msg" id="smsg">치장 목록을 불러오는 중…</div>
+      <div class="hint">드래그: 회전 · 휠/두 손가락: 확대 · 우클릭 드래그: 이동</div>
+    </div>
+    <div class="cur" id="cur" role="group" aria-label="지금 고른 치장"></div>
+    <div class="chatbox">
+      <div class="chat-h"><b>채팅 미리보기</b><span>게임에서 채팅하면 말풍선 옆에 뜨는 작은 얼굴</span></div>
+      <div class="chat-view"><canvas id="chatCv" role="img" aria-label="채팅 얼굴 미리보기"></canvas></div>
+      <div class="chatbar">
+        <input id="chat" type="text" maxlength="60" placeholder="예: 야" autocomplete="off" aria-label="채팅 내용">
+        <button class="tb" id="tChatPng" title="채팅 미리보기를 PNG로 저장">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>저장</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="성별">
+        <button class="tb" id="gM" aria-pressed="true">남성</button><button class="tb" id="gW" aria-pressed="false">여성</button>
+      </div>
+      <button class="tb" id="tBody" aria-pressed="false" title="몸까지 같이 보기 (기본 옷)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v7m0 0-4 6m4-6 4 6M7 11l5-2 5 2"/></svg>몸 보기</button>
+      <button class="tb" id="tSpin" aria-pressed="false" title="자동 회전">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>자동 회전</button>
+      <button class="tb" id="tOutline" aria-pressed="true" title="게임처럼 외곽선 표시">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>외곽선</button>
+      <button class="tb" id="tFx" aria-pressed="true" title="빛나는 효과(이펙트) 표시">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>이펙트</button>
+      <button class="tb" id="tNight" aria-pressed="true" title="어두운 배경">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>어두운 배경</button>
+      <span class="tb-sep"></span>
+      <div class="seg" role="group" aria-label="보는 방향">
+        <button class="tb" id="tFront" title="정면">정면</button><button class="tb" id="tSide" title="옆모습">옆</button><button class="tb" id="tBack" title="뒷모습">뒤</button>
+      </div>
+      <button class="tb" id="tRand" title="무작위 조합">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="15" r="1" fill="currentColor"/><circle cx="15" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="15" r="1" fill="currentColor"/></svg>랜덤</button>
+      <button class="tb" id="tReset" title="기본 치장으로">초기화</button>
+      <button class="tb" id="tShot" title="현재 화면을 PNG로 저장">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>스크린샷</button>
+    </div>
+  </section>
+</main>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const DATA = 'face_data/';
+const BODY_DATA = 'costume_data/';   // '몸 보기' = 코스튬 페이지의 기본 몸·손 모델을 같이 씀
+const TYPES = ['face', 'hair', 'hairColor', 'skin'];
+const TYPE_KO = { face:'얼굴 표정', hair:'머리 모양', hairColor:'머리색', skin:'피부색' };
+const $ = s => document.querySelector(s);
+const state = { db:null, pack:null, gender:'m', tab:'face', sel:{}, body:false, outline:true, fx:true, spin:false, onlyShop:false };
+
+/* ───────── 3D 기본 ───────── */
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.autoRotate = false; controls.autoRotateSpeed = 1.4;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.15));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1, 2, 1.5); camera.add(sun); scene.add(camera);
+const root = new THREE.Group(); scene.add(root);
+const headGroup = new THREE.Group(), bodyGroup = new THREE.Group();
+root.add(headGroup, bodyGroup);
+
+const toonRamp = (() => { const d = new Uint8Array([110,110,110,255, 190,190,190,255, 255,255,255,255]);
+  const t = new THREE.DataTexture(d, 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+function syncBg(){ renderer.setClearColor(new THREE.Color(getComputedStyle(stage).backgroundColor), 1); }
+syncBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncBg);
+function resize(){ const r = stage.getBoundingClientRect(); if (!r.width || !r.height) return;
+  renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+const clock = new THREE.Clock(), pulseMats = [];
+let lastT = null;
+renderer.setAnimationLoop(() => {
+  const t = clock.getElapsedTime();
+  const dt = Math.min(0.05, t - (lastT ?? t)); lastT = t;
+  for (const m of pulseMats){ const [b, f, ph, a] = m.userData.wave; const v = Math.max(0, b + a * Math.sin(2 * Math.PI * (f * t + ph))); m.color.setRGB(v, v, v); }
+  if (state.fx) updateFx(dt);
+  camAnim(); controls.update(); renderer.render(scene, camera);
+});
+
+/* ───────── 모델 불러오기 (코스튬 페이지와 같은 재질 규칙) ───────── */
+const gltf = new GLTFLoader(), texLoader = new THREE.TextureLoader();
+const meshCache = new Map(), texCache = new Map();
+const loadGLB = (f, base = DATA) => { const u = base + f; if (!meshCache.has(u)) meshCache.set(u, gltf.loadAsync(u)); return meshCache.get(u); };
+function prepTex(t){ t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; }
+const loadTex = (f, base = DATA) => { const u = base + f; if (!texCache.has(u)) texCache.set(u, texLoader.loadAsync(u).then(prepTex)); return texCache.get(u); };
+const curSkin = () => itemOf('skin', state.sel.skin);
+// 피부색: race ini 의 colorN (맨살 색) — 0~1
+const SKIN = () => (curSkin()?.color || [242, 209, 140]).map(v => v / 255);
+// 맨살 재질: 텍스처 알파만큼 텍스처, 나머지는 피부색 (게임 color_blend blend_texture_alpha texture tfactor)
+const skinTexCache = new Map();
+function skinTexture(orig, skin){
+  if (!orig?.image) return null;
+  const key = orig.uuid + '|' + skin.join(',');
+  if (skinTexCache.has(key)) return skinTexCache.get(key);
+  const im = orig.image, cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+  const c = cv.getContext('2d'); c.fillStyle = `rgb(${skin.map(v => Math.round(v * 255)).join(',')})`;
+  c.fillRect(0, 0, cv.width, cv.height); c.drawImage(im, 0, 0);
+  const t = prepTex(new THREE.CanvasTexture(cv)); skinTexCache.set(key, t); return t;
+}
+const outlines = [];
+function addOutline(mesh, info){
+  const mat = new THREE.ShaderMaterial({
+    uniforms:{ c:{ value:new THREE.Color(...info.outline) }, w:{ value:(info.outlineWidth || 1) * 0.32 } },
+    vertexShader:'uniform float w; void main(){ vec3 p = position + normal * w; gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.); }',
+    fragmentShader:'uniform vec3 c; void main(){ gl_FragColor = vec4(c,1.); }', side:THREE.BackSide });
+  const ol = new THREE.Mesh(mesh.geometry, mat); ol.visible = state.outline; ol.userData.outline = true;
+  outlines.push(ol); mesh.add(ol);
+}
+async function buildModel(file, mats, forceSkin, base = DATA){
+  const g = (await loadGLB(file, base)).scene.clone(true);
+  const meshes = []; g.traverse(o => o.isMesh && meshes.push(o));
+  for (const o of meshes){
+    const info = mats[parseInt((o.material.name || 'm0').slice(1)) || 0] || {};
+    const orig = info.texFile ? await loadTex(info.texFile, base).catch(() => null) : null;
+    let mat;
+    const tex0 = info.scroll && orig ? scrolled(orig, info.scroll) : orig;
+    if (info.blend === 'add'){
+      // 게임과 같은 가산 혼합 (scene_blend add)
+      mat = new THREE.MeshBasicMaterial({ map:tex0, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+        side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (info.wave){ mat.userData.wave = info.wave; pulseMats.push(mat); }
+      o.userData.fx = true; o.visible = state.fx;
+    } else if (info.unlit && !info.skin && !forceSkin){
+      // 스스로 빛나는 재질(emissive 1): 명암 없이 텍스처 그대로
+      mat = new THREE.MeshBasicMaterial({ map:tex0, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (info.alpha && info.blend !== 'normal'){ mat.transparent = true; mat.depthWrite = false; }
+      else if (info.alpha && info.cutout) mat.alphaTest = 0.5;
+      if (info.outline) addOutline(o, info);
+    } else {
+      const isSkin = forceSkin || !!info.skin;
+      mat = new THREE.MeshToonMaterial({ map: isSkin ? skinTexture(orig, SKIN()) : orig, gradientMap:toonRamp,
+        color: isSkin && !orig ? new THREE.Color(...SKIN()) : 0xffffff, side: info.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+      if (!isSkin && info.cutout && info.blend !== 'alpha') mat.alphaTest = 0.5;
+      if (info.blend === 'alpha'){ mat.transparent = true; mat.depthWrite = false; }
+      if (info.blend === 'mul'){ mat.transparent = true; mat.depthWrite = false; mat.blending = THREE.MultiplyBlending; mat.premultipliedAlpha = true; }
+      if (info.outline) addOutline(o, info);
+    }
+    o.material = mat;
+    // 반사광 패스 (게임 AnimateSpecular): 반사광 텍스처 × specular 색 × 세기 × (N·H)^power 를 더함 — 이펙트 아님(항상 표시)
+    if (info.spec){
+      const st = await loadTex(info.spec.texFile, base).catch(() => null);
+      if (st){
+        const c = info.spec.color.map(v => v * info.spec.lv);
+        const sm = new THREE.ShaderMaterial({
+          uniforms:{ map:{ value:st }, sc:{ value:new THREE.Vector3(...c) }, pw:{ value:info.spec.power }, L:{ value:new THREE.Vector3(1, 2, 1.5).normalize() } },
+          vertexShader:'varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+          fragmentShader:'uniform sampler2D map; uniform vec3 sc; uniform float pw; uniform vec3 L; varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; vec3 h = normalize(L + normalize(vV)); float s = pow(max(dot(n, h), 0.), pw); gl_FragColor = vec4(texture2D(map, vUv).rgb * sc * s, 1.); }',
+          transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:mat.side, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2 });
+        o.add(new THREE.Mesh(o.geometry, sm));
+      }
+    }
+    // 재질의 추가 빛 패스 (예: 아케인 스피넬 몸의 빛나는 무늬) → 같은 모양 위에 겹쳐 그림
+    for (const gl of info.glow || []){
+      const gt = await loadTex(gl.texFile, base).catch(() => null); if (!gt) continue;
+      const gm = new THREE.MeshBasicMaterial({ map: gl.scroll ? scrolled(gt, gl.scroll) : gt, blending:THREE.AdditiveBlending,
+        transparent:true, depthWrite:false, side:mat.side, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2 });
+      if (gl.wave){ gm.userData.wave = gl.wave; pulseMats.push(gm); }
+      const ov = new THREE.Mesh(o.geometry, gm); ov.userData.fx = true; ov.visible = state.fx; o.add(ov);
+    }
+  }
+  return g;
+}
+
+/* ───────── 장착 이펙트 (파티클 · 이펙트 모델) ─────────
+   게임의 이펙트 파일을 단순화해서 흉내 냄 — 뼈 위치 + 오프셋에 파티클을 뿌리고 크기·색·투명도 변화를 따라감 */
+const FLIP = new THREE.Matrix4().makeScale(1, 1, -1);
+const PLANE = new THREE.PlaneGeometry(1, 1);
+const fxSystems = [], scrollers = [];
+function scrolled(t, sc){ const c = t.clone(); c.needsUpdate = true; c.wrapS = c.wrapT = THREE.RepeatWrapping; scrollers.push({ t:c, u:sc[0], v:sc[1] }); return c; }
+const keyAt = (keys, t) => {
+  if (!keys?.length) return null;
+  if (t <= keys[0][0]) return keys[0].slice(1);
+  for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]){
+    const a = keys[i-1], b = keys[i], k = (t - a[0]) / ((b[0] - a[0]) || 1);
+    return a.slice(1).map((v, j) => v + (b[j+1] - v) * k);
+  }
+  return keys[keys.length - 1].slice(1);
+};
+const rnd = r => r[0] + Math.random() * ((r[1] ?? r[0]) - r[0]);
+function boneMat(name){
+  const B = (state.pack?.pose && state.db.poses?.[state.pack.pose]?.bones) || state.db.bones;
+  const b = B?.[name] || B?.['bip01'], m = new THREE.Matrix4();
+  if (b) m.set(...b); return m;
+}
+// 게임 좌표(왼손) 변환 M → three 좌표: FLIP·M·FLIP
+const toThree = m => FLIP.clone().multiply(m).multiply(FLIP);
+const gq = q => new THREE.Quaternion(q[0], q[1], q[2], q[3]);
+async function buildFx(list){
+  const out = new THREE.Group(); out.userData.fx = true; out.visible = state.fx;
+  for (const e of list || []){
+    const G = new THREE.Group(); G.matrixAutoUpdate = false;
+    G.matrix.copy(toThree(boneMat(e.bone).multiply(new THREE.Matrix4().compose(new THREE.Vector3(...e.pos), gq(e.rot).normalize(), new THREE.Vector3(1,1,1)))));
+    const sys = { e, G, parts:[], acc:0 };
+    if (e.kind === 'm'){
+      // 이펙트 모델: 시작 회전·크기 그대로 고정해 둠
+      const model = await buildModel(e.file, e.materials).catch(() => null); if (!model) continue;
+      model.traverse(o => { if (o.isMesh && !o.userData.outline) o.userData.fx = true; });
+      const sc = keyAt(e.scale, 0) || [1,1,1];
+      const r = new THREE.Matrix4();
+      if (e.srot) r.makeRotationAxis(new THREE.Vector3(e.srot[0], e.srot[1], e.srot[2]).normalize(), THREE.MathUtils.degToRad(e.srot[3]));
+      const m = new THREE.Matrix4().makeTranslation(...e.epos).multiply(r).multiply(new THREE.Matrix4().makeScale(sc[0], sc[1], sc[2]));
+      model.matrixAutoUpdate = false; model.matrix.copy(toThree(m));
+      G.add(model);
+    } else {
+      const t = await loadTex(e.texFile).catch(() => null); if (!t) continue;
+      sys.sub = e.blend.includes('sub');
+      sys.map = t;
+      // 처음 모습: 미리 몇 초 돌려 둠 (마법진처럼 천천히 나타나는 것도 바로 보이게)
+      for (let i = 0; i < Math.min(e.start, e.quota); i++) spawn(sys);
+      const pre = Math.min(Math.max(e.life[0], e.life[1] ?? 0) / 1000 * 0.47, 5);
+      for (let k = 0; k < pre * 20; k++) stepFx(sys, 0.05, false);
+    }
+    out.add(G); fxSystems.push(sys);
+  }
+  return out;
+}
+function spawn(s){
+  const e = s.e, alive = s.parts.filter(p => !p.dead).length;
+  if (alive >= Math.min(e.quota || 10, 150)) return;
+  let p = s.parts.find(q => q.dead);
+  if (!p){
+    // render_type add = 가산(src_alpha, one) / rev_subtract = 빼기(바탕 − 이펙트)
+    const mat = new THREE.MeshBasicMaterial({ map:s.map, transparent:true, depthWrite:false, side:THREE.DoubleSide });
+    if (s.sub){ mat.blending = THREE.CustomBlending; mat.blendEquation = THREE.ReverseSubtractEquation; mat.blendSrc = THREE.SrcAlphaFactor; mat.blendDst = THREE.OneFactor;
+      mat.blendEquationAlpha = THREE.AddEquation; mat.blendSrcAlpha = THREE.ZeroFactor; mat.blendDstAlpha = THREE.OneFactor; }  // 화면 투명도는 그대로
+    else if (e.blend === 'add') mat.blending = THREE.AdditiveBlending;
+    p = { mesh:new THREE.Mesh(PLANE, mat) }; s.G.add(p.mesh); s.parts.push(p);
+  }
+  const a = e.area || [0,0,0];
+  p.pos = new THREE.Vector3(e.epos[0] + (Math.random() - .5) * a[0], e.epos[1] + (Math.random() - .5) * a[1], e.epos[2] + (Math.random() - .5) * a[2]);
+  const dir = new THREE.Vector3(...e.edir).normalize();
+  if (e.eangle > 0){
+    const ang = THREE.MathUtils.degToRad(e.eangle) * Math.random(), perp = new THREE.Vector3(1,0,0).cross(dir);
+    if (perp.lengthSq() < 1e-6) perp.set(0,0,1).cross(dir);
+    dir.applyAxisAngle(perp.normalize().applyAxisAngle(dir, Math.random() * Math.PI * 2), ang);
+  }
+  p.vel = dir.multiplyScalar(rnd(e.speed));
+  p.age = 0; p.life = Math.max(50, rnd(e.life)); p.dead = false;
+  p.w = rnd(e.w); p.h = rnd(e.h);
+  p.rot = THREE.MathUtils.degToRad(e.texrot ? rnd(e.texrot.range) : (e.tex0 ? rnd(e.tex0) : 0));
+  p.rs = e.texrot ? rnd(e.texrot.speed) : 0;
+  p.mesh.visible = true;
+}
+const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _z = new THREE.Vector3(0,0,1), _c = new THREE.Color();
+function stepFx(s, dt, orient = true){
+  const e = s.e;
+  if (e.kind === 'm') return;
+  s.acc += (e.rate || 0) * dt;
+  while (s.acc >= 1){ s.acc -= 1; spawn(s); }
+  let camQ = null;
+  if (orient){ s.G.updateWorldMatrix(true, false); s.G.getWorldQuaternion(_q2).invert(); camQ = _q2.multiply(camera.quaternion); }
+  // billboard point = 카메라를 봄 / common + none_billboard = common_dir 이 면의 방향(고정) / common = common_dir 축을 세운 채 카메라 쪽으로 돎
+  const cd = new THREE.Vector3(e.cdir[0], e.cdir[1], -e.cdir[2]).normalize();
+  const fixed = e.bb !== 'point' && e.fixed, axial = e.bb !== 'point' && !e.fixed;
+  const base = fixed ? new THREE.Quaternion().setFromUnitVectors(_z, cd) : null;
+  let camL = null;
+  if (axial && orient){ s.G.updateWorldMatrix(true, false); camL = s.G.worldToLocal(camera.position.clone()); }
+  for (const p of s.parts){
+    if (p.dead) continue;
+    p.age += dt * 1000;
+    const t = p.age / p.life;
+    if (t >= 1){ p.dead = true; p.mesh.visible = false; continue; }
+    if (e.force) p.vel.x += e.force[0] * dt, p.vel.y += e.force[1] * dt, p.vel.z += e.force[2] * dt;
+    p.pos.addScaledVector(p.vel, dt);
+    p.rot += p.rs * dt;
+    const sc = keyAt(e.scale, t) || [1,1], col = keyAt(e.color, t) || [255,255,255], al = (keyAt(e.alpha, t) || [1])[0];
+    p.mesh.position.set(p.pos.x, p.pos.y, -p.pos.z);
+    p.mesh.scale.set(p.w * sc[0], p.h * (sc[1] ?? sc[0]), 1);
+    if (fixed) p.mesh.quaternion.copy(base).multiply(_q.setFromAxisAngle(_z, p.rot));
+    else if (axial && camL){
+      const toC = camL.clone().sub(p.mesh.position), right = new THREE.Vector3().crossVectors(cd, toC).normalize(), nrm = new THREE.Vector3().crossVectors(right, cd);
+      p.mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, cd, nrm)).multiply(_q.setFromAxisAngle(_z, p.rot));
+    }
+    else if (camQ) p.mesh.quaternion.copy(camQ).multiply(_q.setFromAxisAngle(_z, p.rot));
+    const k = e.m2x ? 2 / 255 : 1 / 255, m = p.mesh.material;
+    m.color.setRGB(col[0] * k, col[1] * k, col[2] * k); m.opacity = Math.max(0, Math.min(1, al));
+  }
+}
+function updateFx(dt){
+  for (const sc of scrollers){ sc.t.offset.x += sc.u * dt; sc.t.offset.y += sc.v * dt; }
+  for (const s of fxSystems){
+    let o = s.G, vis = true;
+    while (o){ if (!o.visible){ vis = false; break; } o = o.parent; }
+    if (vis) stepFx(s, dt);
+  }
+}
+
+
+
+/* ───────── 데이터 ───────── */
+const nz = s => String(s || '').replace(/\s+/g, '').toLowerCase();
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const chosung = s => [...String(s || '')].map(c => { const k = c.charCodeAt(0) - 0xAC00; return k >= 0 && k < 11172 ? CHO[Math.floor(k / 588)] : c; }).join('');
+const isCho = s => /^[ㄱ-ㅎ]+$/.test(s);
+const icon = f => f ? DATA + f : '';
+const G = () => state.db[state.gender];
+const LIST = { face:'faces', hair:'hairs', hairColor:'hairColors', skin:'skins' };
+const listOf = t => G()[LIST[t]] || [];
+const itemOf = (t, code) => listOf(t).find(x => x.code === code);
+const rgb = a => `rgb(${a.join(',')})`;
+
+async function init(){
+  try {
+    const r = await fetch(DATA + 'face.json', { cache:'no-cache' });
+    if (!r.ok) throw new Error(r.status);
+    state.db = await r.json();
+  } catch(e){
+    $('#smsg').innerHTML = location.protocol === 'file:'
+      ? '파일을 더블클릭해서 열면 데이터를 못 불러와요.<br>GitHub Pages 주소로 열어 주세요.'
+      : '치장 데이터를 불러오지 못했어요.<br><small>face_data 폴더가 같이 올라갔는지 확인해 주세요.</small>';
+    return;
+  }
+  for (const g of ['m', 'w']) for (const t of TYPES) for (const it of state.db[g]?.[LIST[t]] || []){ it._s = nz(it.name); it._c = chosung(it._s); }
+  readHash(); initBubble();
+  setGenderUI(); renderTabs(); renderGrid(); renderCur();
+  await rebuild(true);
+}
+// 주소: #m/얼굴/머리/머리색/피부색 (치장 코드)
+function readHash(){
+  const [g, ...codes] = location.hash.slice(1).split('/');
+  state.gender = g === 'w' ? 'w' : 'm';
+  const d = G().default || {};
+  TYPES.forEach((t, i) => { const c = parseInt(codes[i]); state.sel[t] = itemOf(t, c) ? c : d[t] ?? listOf(t)[0]?.code; });
+}
+function updateHash(){ history.replaceState(null, '', '#' + [state.gender, ...TYPES.map(t => state.sel[t])].join('/')); }
+
+/* ───────── 목록 ───────── */
+function renderTabs(){ for (const b of $('#tabs').children) b.setAttribute('aria-selected', b.dataset.t === state.tab); }
+function swatch(t, it, cls = 'sw'){
+  // 아이콘이 없을 때 색 동그라미 (피부색 = 맨살 색 + 외곽선 색)
+  if (t === 'skin') return `<span class="${cls}" style="background:${rgb(it.color)};border-color:${rgb(it.outline)}"></span>`;
+  return `<span class="${cls}" style="background:var(--line);border-color:var(--line)"></span>`;
+}
+function renderGrid(){
+  const t = state.tab, q = nz($('#q').value), ul = $('#grid');
+  let list = listOf(t);
+  if (state.onlyShop) list = list.filter(it => it.active);
+  if (q){ const cho = isCho(q); list = list.filter(it => cho ? it._c.includes(q) : it._s.includes(q) || String(it.code) === q); }
+  ul.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const it of list){
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.setAttribute('role', 'option'); b.setAttribute('aria-selected', it.code === state.sel[t]); b.dataset.code = it.code;
+    b.title = `${it.name} (코드 ${it.code})${it.active ? '' : ' · 지금은 상점에서 팔지 않음'}`;
+    b.innerHTML = `<span class="ic">${it.icon ? `<img loading="lazy" alt="" src="${icon(it.icon)}">` : swatch(t, it)}</span><span class="nm"></span>${it.active ? '' : '<span class="off">미판매</span>'}`;
+    b.querySelector('.nm').textContent = it.name;
+    b.onclick = () => choose(t, it.code);
+    li.append(b); frag.append(li);
+  }
+  ul.append(frag);
+  $('#count').textContent = list.length ? `${TYPE_KO[t]} ${list.length}개` : '검색 결과가 없어요';
+}
+function renderCur(){
+  const box = $('#cur'); box.textContent = '';
+  for (const t of TYPES){
+    const it = itemOf(t, state.sel[t]);
+    const b = document.createElement('button'); b.className = 'pbtn'; b.setAttribute('aria-pressed', state.tab === t);
+    b.innerHTML = `<span class="pi">${it?.icon ? `<img alt="" src="${icon(it.icon)}">` : it ? swatch(t, it) : ''}</span><span class="pt"><b></b><small></small></span>`;
+    b.querySelector('b').textContent = TYPE_KO[t]; b.querySelector('small').textContent = it?.name || '없음';
+    b.onclick = () => setTab(t);
+    box.append(b);
+  }
+}
+function setTab(t){ state.tab = t; $('#q').value = ''; renderTabs(); renderGrid(); renderCur();
+  $('#grid').querySelector('[aria-selected=true]')?.scrollIntoView({ block:'nearest' }); }
+function choose(t, code){
+  if (state.sel[t] === code) return;
+  state.sel[t] = code; updateHash();
+  for (const b of $('#grid').children) { const x = b.firstChild; x.setAttribute('aria-selected', +x.dataset.code === code); }
+  renderCur(); rebuild(false);
+}
+$('#q').addEventListener('input', renderGrid);
+$('#onlyShop').onchange = e => { state.onlyShop = e.target.checked; renderGrid(); };
+for (const b of $('#tabs').children) b.onclick = () => setTab(b.dataset.t);
+
+/* ───────── 얼굴 · 머리 만들기 ───────── */
+// 게임 값 그대로: 맨살 외곽선 = 피부색의 outline, 머리 외곽선 = 머리색의 outline, 머리 텍스처 = partsN_colorC
+const c01 = a => a.map(v => +(v / 255).toFixed(3));
+function faceMats(face){
+  const sk = curSkin();
+  return face.materials.map(m => m.skin && sk ? { ...m, outline: c01(sk.outline) } : m);
+}
+function hairMats(hair){
+  const col = hair.colors[state.sel.hairColor] || hair.colors['1'] || Object.values(hair.colors)[0];
+  return hair.materials.map((m, i) => hair.slots.includes(i) && col
+    ? { ...m, texFile: col.texFile, ...(col.outline ? { outline: c01(col.outline) } : {}) } : m);
+}
+let bodyDb = null;
+async function bodyParts(){
+  if (!bodyDb) bodyDb = fetch(BODY_DATA + 'costumes.json').then(r => r.ok ? r.json() : null).catch(() => null);
+  const db = await bodyDb; if (!db) return null;
+  const ch = (state.gender === 'w' && db.characterW) || db.character;
+  return (ch?.parts || []).filter(p => p.role === 'body' || p.role === 'hand');
+}
+
+let token = 0;
+async function rebuild(reset){
+  const my = ++token, face = itemOf('face', state.sel.face), hair = itemOf('hair', state.sel.hair);
+  $('#smsg').textContent = '불러오는 중…'; $('#smsg').hidden = false;
+  try {
+    pulseMats.length = 0; outlines.length = 0; fxSystems.length = 0; scrollers.length = 0;
+    const head = [];
+    if (face) head.push(await buildModel(face.file, faceMats(face)));
+    if (hair) head.push(await buildModel(hair.file, hairMats(hair)));
+    if (face?.fx?.length) head.push(await buildFx(face.fx));
+    let body = [];
+    if (state.body){
+      const ps = await bodyParts();
+      if (ps) body = (await Promise.all(ps.map(p => buildModel(p.file, p.materials.map(m => m.skin && curSkin() ? { ...m, outline: c01(curSkin().outline) } : m), false, BODY_DATA).catch(() => null)))).filter(Boolean);
+    }
+    if (my !== token) return;
+    headGroup.clear(); head.forEach(g => headGroup.add(g));
+    bodyGroup.clear(); body.forEach(g => bodyGroup.add(g));
+    root.traverse(o => { if (o.userData.outline) o.visible = state.outline; if (o.userData.fx) o.visible = state.fx; });
+    $('#smsg').hidden = !!(face || hair);
+    if (!face && !hair) $('#smsg').textContent = '변환된 치장이 없어요.';
+    frame(reset); renderPortrait();
+  } catch(e){ console.error(e); if (my === token) $('#smsg').textContent = '모델을 불러오지 못했어요.'; }
+}
+
+/* ───────── 카메라 ───────── */
+let anim = null;
+function camAnim(){
+  if (!anim) return;
+  const k = Math.min(1, (performance.now() - anim.t0) / 450), e = 1 - Math.pow(1 - k, 3);
+  camera.position.lerpVectors(anim.p0, anim.p1, e); controls.target.lerpVectors(anim.c0, anim.c1, e);
+  if (k >= 1) anim = null;
+}
+let framedBody = null;
+function frame(reset){
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  for (const g of headGroup.children) if (!g.userData.fx) box.expandByObject(g);
+  if (state.body) for (const g of bodyGroup.children) box.expandByObject(g);
+  if (box.isEmpty()) return;
+  // 몸 보기를 켜고 끌 때만 다시 맞춤 (얼굴·머리만 바꿀 때는 카메라 그대로)
+  if (!reset && framedBody === state.body) return;
+  framedBody = state.body;
+  const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  const r = Math.max(s.y * 0.55, Math.max(s.x, s.z) * 0.62, 6);
+  const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (state.body ? 0.98 : 1.4);
+  const dir = reset ? new THREE.Vector3(0.18, 0.06, 1).normalize() : camera.position.clone().sub(controls.target).normalize();
+  const p1 = c.clone().add(dir.multiplyScalar(d));
+  camera.near = d / 100; camera.far = d * 30; camera.updateProjectionMatrix();
+  controls.minDistance = r * 0.6; controls.maxDistance = d * 4;
+  if (reset){ anim = null; camera.position.copy(p1); controls.target.copy(c); }
+  else anim = { t0:performance.now(), p0:camera.position.clone(), p1, c0:controls.target.clone(), c1:c };
+}
+function look(x, z){
+  const t = controls.target, dist = camera.position.distanceTo(t);
+  const p1 = t.clone().add(new THREE.Vector3(x, 0.06, z).normalize().multiplyScalar(dist));
+  anim = { t0:performance.now(), p0:camera.position.clone(), p1, c0:t.clone(), c1:t.clone() };
+  if (state.spin) $('#tSpin').click();
+}
+
+/* ───────── 채팅 미리보기 (게임 채팅 말풍선: 왼쪽 작은 얼굴 + 말풍선) ─────────
+   말풍선 = 게임 chatbubblewnd.xml 값: 틀 tooltip5 · 기본 너비 88 · 높이 8 + 줄마다 14 · 글자 시작 (7, 5) · 75px 넘으면 줄바꿈 · 최대 4줄.
+   얼굴 = 지금 고른 얼굴·머리·색을 정면에서 작게 찍은 그림. 화면에서는 게임 픽셀 × CHAT_SCALE 로 확대 */
+const CHAT_SCALE = 3, FACE_PX = 24, PORTRAIT_RES = 128;
+const chatCv = $('#chatCv'), cctx = chatCv.getContext('2d');
+const bubbleImg = { frame:null, tail:null };
+const portraitCv = document.createElement('canvas'); portraitCv.width = portraitCv.height = PORTRAIT_RES;
+const portraitRT = new THREE.WebGLRenderTarget(PORTRAIT_RES, PORTRAIT_RES, { samples:4 });
+portraitRT.texture.colorSpace = THREE.SRGBColorSpace;
+const portraitCam = new THREE.PerspectiveCamera(18, 1, 1, 5000);
+portraitCam.add(new THREE.DirectionalLight(0xffffff, 1.6).translateX(1).translateY(2).translateZ(1.5)); scene.add(portraitCam);
+let portraitReady = false;
+function loadImg(src){ return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+async function initBubble(){
+  const B = state.db.bubble; if (!B) return;
+  [bubbleImg.frame, bubbleImg.tail] = await Promise.all([B.frame ? loadImg(DATA + B.frame) : null, B.tail ? loadImg(DATA + B.tail) : null]);
+  drawChat();
+}
+// 지금 머리를 정면에서 작게 찍기 (몸·배경 없이)
+function renderPortrait(){
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  for (const g of headGroup.children) if (!g.userData.fx) box.expandByObject(g);
+  if (box.isEmpty()){ portraitReady = false; drawChat(); return; }
+  const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  const r = Math.max(s.x, s.y) / 2 * 1.0, d = r / Math.tan(THREE.MathUtils.degToRad(portraitCam.fov / 2));
+  portraitCam.position.copy(c).add(new THREE.Vector3(0.12, 0.04, 1).normalize().multiplyScalar(d));
+  portraitCam.lookAt(c); portraitCam.near = d / 50; portraitCam.far = d * 10; portraitCam.updateProjectionMatrix();
+  portraitCam.updateMatrixWorld(true);
+  const bodyVis = bodyGroup.visible; bodyGroup.visible = false;
+  const oldClear = renderer.getClearColor(new THREE.Color()), oldAlpha = renderer.getClearAlpha();
+  renderer.setRenderTarget(portraitRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, portraitCam);
+  const px = new Uint8Array(PORTRAIT_RES * PORTRAIT_RES * 4);
+  renderer.readRenderTargetPixels(portraitRT, 0, 0, PORTRAIT_RES, PORTRAIT_RES, px);
+  renderer.setRenderTarget(null); renderer.setClearColor(oldClear, oldAlpha); bodyGroup.visible = bodyVis;
+  const img = new ImageData(PORTRAIT_RES, PORTRAIT_RES), row = PORTRAIT_RES * 4;
+  for (let y = 0; y < PORTRAIT_RES; y++) img.data.set(px.subarray((PORTRAIT_RES - 1 - y) * row, (PORTRAIT_RES - y) * row), y * row);  // 위아래 뒤집기
+  portraitCv.getContext('2d').putImageData(img, 0, 0);
+  portraitReady = true; drawChat();
+}
+function wrapLines(ctx, text, B){
+  ctx.font = '12px "Noto Sans KR", "Malgun Gothic", sans-serif';
+  const lines = []; let cur = '';
+  for (const ch of [...text]){
+    if (ctx.measureText(cur + ch).width > B.wrap && cur){ lines.push(cur); cur = ch.trimStart(); if (lines.length >= B.maxLine) break; }
+    else cur += ch;
+  }
+  if (lines.length < B.maxLine && cur) lines.push(cur);
+  return lines.slice(0, B.maxLine);
+}
+// 말풍선 하나 그리기 (게임 픽셀 단위, ctx 는 이미 확대돼 있음)
+function drawBubbleBox(ctx, lines, B){
+  const W = B.w, H = B.h + B.lineH * lines.length, o = B.outset, f = bubbleImg.frame;
+  ctx.imageSmoothingEnabled = false;
+  if (f){
+    // 9칸 틀: 모서리 15px, 가운데 1px — 바깥으로 7px 나가게 (게임 OffsetX/Y 7)
+    const X = [-o, -o + 15, W + o - 15], Y = [-o, -o + 15, H + o - 15], WS = [15, W + 2 * o - 30, 15], HS = [15, H + 2 * o - 30, 15];
+    const SX = [0, 15, 16], SW = [15, 1, 15];
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) ctx.drawImage(f, SX[i], SX[j], SW[i], SW[j], X[i], Y[j], WS[i], HS[j]);
+  } else {
+    ctx.fillStyle = '#eeede8'; ctx.strokeStyle = '#242424'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(0, 0, W, H, 4); ctx.fill(); ctx.stroke();
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.fillStyle = '#282828'; ctx.textBaseline = 'top'; ctx.font = '12px "Noto Sans KR", "Malgun Gothic", sans-serif';
+  lines.forEach((l, i) => ctx.fillText(l, B.x, B.y + i * B.lineH - 1));
+  return H;
+}
+function drawChat(){
+  const B = state.db?.bubble || { w:88, h:8, lineH:14, x:7, y:5, wrap:75, maxLine:4, outset:7 };
+  const text = $('#chat').value.trim() || $('#chat').placeholder.replace(/^예:\s*/, '');
+  const dpr = Math.min(devicePixelRatio, 2), S = CHAT_SCALE;
+  const lines = wrapLines(cctx, text, B), H = B.h + B.lineH * lines.length;
+  // 게임처럼 얼굴 바로 오른쪽에 말풍선 (말풍선 그림자 7px 은 얼굴 밑으로 겹침), 얼굴은 위에 그림
+  const pad = 10, faceX = pad, bx = faceX + FACE_PX + 1;
+  const Wg = bx + B.w + B.outset + pad, Hg = pad + Math.max(FACE_PX, H) + pad;
+  chatCv.style.width = Wg * S + 'px'; chatCv.style.height = Hg * S + 'px';
+  chatCv.width = Math.round(Wg * S * dpr); chatCv.height = Math.round(Hg * S * dpr);
+  const ctx = cctx; ctx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0); ctx.clearRect(0, 0, Wg, Hg);
+  const top = pad + Math.max(0, (FACE_PX - H) / 2);
+  ctx.save(); ctx.translate(bx, top);
+  drawBubbleBox(ctx, lines, B); ctx.restore();
+  if (portraitReady) ctx.drawImage(portraitCv, faceX, pad + Math.max(0, (H - FACE_PX) / 2), FACE_PX, FACE_PX);
+}
+$('#chat').addEventListener('input', drawChat);
+$('#chat').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('#tChatPng').onclick = () => {
+  const a = document.createElement('a'); a.href = chatCv.toDataURL('image/png');
+  a.download = `채팅얼굴_${['face','hair'].map(t => itemOf(t, state.sel[t])?.name || '').join('_')}.png`.replace(/\s+/g, '');
+  document.body.append(a); a.click(); a.remove();
+};
+
+/* ───────── 툴바 ───────── */
+function setGenderUI(){ $('#gM').setAttribute('aria-pressed', state.gender === 'm'); $('#gW').setAttribute('aria-pressed', state.gender === 'w'); }
+for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
+  if (state.gender === g) return;
+  // 머리색·피부색은 남녀 공통 코드 → 유지, 얼굴·머리 모양은 성별마다 달라서 기본값으로
+  const keep = { hairColor:state.sel.hairColor, skin:state.sel.skin };
+  state.gender = g; setGenderUI();
+  const d = G().default || {};
+  for (const t of TYPES) state.sel[t] = (keep[t] != null && itemOf(t, keep[t])) ? keep[t] : d[t] ?? listOf(t)[0]?.code;
+  updateHash(); renderGrid(); renderCur(); rebuild(true);
+};
+$('#tBody').onclick = e => { state.body = !state.body; e.currentTarget.setAttribute('aria-pressed', state.body); rebuild(false); };
+$('#tSpin').onclick = e => { state.spin = !state.spin; e.currentTarget.setAttribute('aria-pressed', state.spin); controls.autoRotate = state.spin; };
+$('#tOutline').onclick = e => { state.outline = !state.outline; e.currentTarget.setAttribute('aria-pressed', state.outline);
+  root.traverse(o => { if (o.userData.outline) o.visible = state.outline; }); renderPortrait(); };
+$('#tFx').onclick = e => { state.fx = !state.fx; e.currentTarget.setAttribute('aria-pressed', state.fx);
+  root.traverse(o => { if (o.userData.fx) o.visible = state.fx; }); renderPortrait(); };
+$('#tNight').onclick = e => { const on = stage.classList.toggle('night'); e.currentTarget.setAttribute('aria-pressed', on); syncBg(); };
+$('#tFront').onclick = () => look(0.12, 1);
+$('#tSide').onclick = () => look(1, 0.08);
+$('#tBack').onclick = () => look(0.12, -1);
+$('#tRand').onclick = () => {
+  for (const t of TYPES){ const l = listOf(t).filter(it => !state.onlyShop || it.active); if (l.length) state.sel[t] = l[Math.floor(Math.random() * l.length)].code; }
+  updateHash(); renderGrid(); renderCur(); rebuild(false);
+};
+$('#tReset').onclick = () => {
+  const d = G().default || {}; for (const t of TYPES) state.sel[t] = d[t] ?? listOf(t)[0]?.code;
+  updateHash(); renderGrid(); renderCur(); rebuild(false);
+};
+$('#tShot').onclick = () => {
+  const a = document.createElement('a'); a.href = renderer.domElement.toDataURL('image/png');
+  a.download = `치장_${['face','hair'].map(t => itemOf(t, state.sel[t])?.name || '').join('_')}.png`.replace(/\s+/g, '');
+  document.body.append(a); a.click(); a.remove();
+};
+addEventListener('hashchange', () => { const g0 = state.gender; readHash(); setGenderUI(); renderGrid(); renderCur(); rebuild(g0 !== state.gender); });
+
+init();
+</script>
+</body>
+</html>
