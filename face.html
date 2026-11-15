@@ -194,8 +194,6 @@ a{color:inherit}
       <div class="seg" role="group" aria-label="성별">
         <button class="tb" id="gM" aria-pressed="true">남성</button><button class="tb" id="gW" aria-pressed="false">여성</button>
       </div>
-      <button class="tb" id="tBody" aria-pressed="false" title="몸까지 같이 보기 (기본 옷)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v7m0 0-4 6m4-6 4 6M7 11l5-2 5 2"/></svg>몸 보기</button>
       <button class="tb" id="tSpin" aria-pressed="false" title="자동 회전">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>자동 회전</button>
       <button class="tb" id="tOutline" aria-pressed="true" title="게임처럼 외곽선 표시">
@@ -229,11 +227,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const DATA = 'face_data/';
-const BODY_DATA = 'costume_data/';   // '몸 보기' = 코스튬 페이지의 기본 몸·손 모델을 같이 씀
 const TYPES = ['face', 'hair', 'hairColor', 'skin'];
 const TYPE_KO = { face:'얼굴 표정', hair:'머리 모양', hairColor:'머리색', skin:'피부색' };
 const $ = s => document.querySelector(s);
-const state = { talkLoop:true, db:null, pack:null, gender:'m', tab:'face', sel:{}, body:false, outline:true, fx:true, spin:false, onlyShop:false };
+const state = { talkLoop:true, db:null, pack:null, gender:'m', tab:'face', sel:{}, outline:true, fx:true, spin:false, onlyShop:false };
 
 /* ───────── 3D 기본 ───────── */
 const stage = $('#stage');
@@ -248,8 +245,8 @@ controls.enableDamping = true; controls.autoRotate = false; controls.autoRotateS
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.15));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1, 2, 1.5); camera.add(sun); scene.add(camera);
 const root = new THREE.Group(); scene.add(root);
-const headGroup = new THREE.Group(), bodyGroup = new THREE.Group();
-root.add(headGroup, bodyGroup);
+const headGroup = new THREE.Group();
+root.add(headGroup);
 
 const toonRamp = (() => { const d = new Uint8Array([110,110,110,255, 190,190,190,255, 255,255,255,255]);
   const t = new THREE.DataTexture(d, 3, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
@@ -576,13 +573,6 @@ function hairMats(hair){
   return hair.materials.map((m, i) => hair.slots.includes(i) && col
     ? { ...m, texFile: col.texFile, ...(col.outline ? { outline: c01(col.outline) } : {}) } : m);
 }
-let bodyDb = null;
-async function bodyParts(){
-  if (!bodyDb) bodyDb = fetch(BODY_DATA + 'costumes.json').then(r => r.ok ? r.json() : null).catch(() => null);
-  const db = await bodyDb; if (!db) return null;
-  const ch = (state.gender === 'w' && db.characterW) || db.character;
-  return (ch?.parts || []).filter(p => p.role === 'body' || p.role === 'hand');
-}
 
 let token = 0;
 async function rebuild(reset){
@@ -603,14 +593,8 @@ async function rebuild(reset){
     }
     if (hair){ const g = await buildModel(hair.file, hairMats(hair)); g.userData.role = 'hair'; head.push(g); }
     if (face?.fx?.length) head.push(await buildFx(face.fx));
-    let body = [];
-    if (state.body){
-      const ps = await bodyParts();
-      if (ps) body = (await Promise.all(ps.map(p => buildModel(p.file, p.materials.map(m => m.skin && curSkin() ? { ...m, outline: c01(curSkin().outline) } : m), false, BODY_DATA).catch(() => null)))).filter(Boolean);
-    }
     if (my !== token) return;
     headGroup.clear(); head.forEach(g => headGroup.add(g));
-    bodyGroup.clear(); body.forEach(g => bodyGroup.add(g));
     root.traverse(o => { if (o.userData.outline) o.visible = state.outline; if (o.userData.fx) o.visible = state.fx; });
     $('#smsg').hidden = !!(face || hair);
     if (!face && !hair) $('#smsg').textContent = '변환된 치장이 없어요.';
@@ -626,19 +610,16 @@ function camAnim(){
   camera.position.lerpVectors(anim.p0, anim.p1, e); controls.target.lerpVectors(anim.c0, anim.c1, e);
   if (k >= 1) anim = null;
 }
-let framedBody = null;
 function frame(reset){
   root.updateMatrixWorld(true);
   const box = new THREE.Box3();
   for (const g of headGroup.children) if (!g.userData.fx) box.expandByObject(g);
-  if (state.body) for (const g of bodyGroup.children) box.expandByObject(g);
   if (box.isEmpty()) return;
-  // 몸 보기를 켜고 끌 때만 다시 맞춤 (얼굴·머리만 바꿀 때는 카메라 그대로)
-  if (!reset && framedBody === state.body) return;
-  framedBody = state.body;
+  // 얼굴·머리만 바꿀 때는 카메라 그대로
+  if (!reset) return;
   const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
   const r = Math.max(s.y * 0.55, Math.max(s.x, s.z) * 0.62, 6);
-  const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (state.body ? 0.98 : 1.4);
+  const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.4;
   const dir = reset ? new THREE.Vector3(0.18, 0.06, 1).normalize() : camera.position.clone().sub(controls.target).normalize();
   const p1 = c.clone().add(dir.multiplyScalar(d));
   camera.near = d / 100; camera.far = d * 30; camera.updateProjectionMatrix();
@@ -688,7 +669,6 @@ function renderPortrait(){
     let g = o; while (g && g.parent !== headGroup) g = g.parent;
     const th = g?.userData.role === 'hair' ? CHAT.hairOutline : CHAT.headOutline;
     saved.push([o, o.material.uniforms.w.value, o.visible]); o.material.uniforms.w.value = th * 0.32; o.visible = state.outline; } });
-  const bodyVis = bodyGroup.visible; bodyGroup.visible = false;
   const oldClear = renderer.getClearColor(new THREE.Color()), oldAlpha = renderer.getClearAlpha();
   const capture = cv => {
     renderer.setRenderTarget(portraitRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, portraitCam);
@@ -703,7 +683,7 @@ function renderPortrait(){
   const talk = headGroup.children.find(g => g.userData.role === 'face')?.userData.talk;
   hasTalk = !!talk;
   if (talk){ const m = talk.mesh.material, old = m.map; m.map = talk.map; m.needsUpdate = true; capture(frameTalk); m.map = old; m.needsUpdate = true; }
-  renderer.setRenderTarget(null); renderer.setClearColor(oldClear, oldAlpha); bodyGroup.visible = bodyVis;
+  renderer.setRenderTarget(null); renderer.setClearColor(oldClear, oldAlpha);
   for (const [o, w, v] of saved){ o.material.uniforms.w.value = w; o.visible = v; }
   showFrame(false);
   $('#tTalk').disabled = !hasTalk;
@@ -752,7 +732,6 @@ for (const [id, g] of [['#gM','m'], ['#gW','w']]) $(id).onclick = () => {
   for (const t of TYPES) state.sel[t] = (keep[t] != null && itemOf(t, keep[t])) ? keep[t] : d[t] ?? listOf(t)[0]?.code;
   updateHash(); renderGrid(); renderCur(); rebuild(true);
 };
-$('#tBody').onclick = e => { state.body = !state.body; e.currentTarget.setAttribute('aria-pressed', state.body); rebuild(false); };
 $('#tSpin').onclick = e => { state.spin = !state.spin; e.currentTarget.setAttribute('aria-pressed', state.spin); controls.autoRotate = state.spin; };
 $('#tOutline').onclick = e => { state.outline = !state.outline; e.currentTarget.setAttribute('aria-pressed', state.outline);
   root.traverse(o => { if (o.userData.outline) o.visible = state.outline; }); renderPortrait(); };
