@@ -93,11 +93,14 @@ a{color:inherit}
 .chatbox{margin:0 12px 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .chat-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font-size:13px}
 .chat-h span{color:var(--muted);font-size:12px}
-.chat-view{background:#262c34;display:flex;justify-content:center;align-items:center;padding:6px;min-height:90px;overflow:auto}
-.chat-view canvas{display:block;image-rendering:auto}
-.chatbar{display:flex;gap:6px;align-items:center;padding:8px 12px}
-.chatbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;outline:none}
-.chatbar input:focus{border-color:var(--steel)}
+.chat-view{background:#262c34;display:flex;justify-content:center;align-items:flex-end;gap:28px;padding:14px 12px 10px;flex-wrap:wrap}
+.chat-view figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.chat-view canvas{display:block}
+.chat-view figcaption{font-size:11.5px;color:#b3bdc9}
+.chat-view .tb{align-self:center}
+.talkbtns{display:flex;flex-direction:column;gap:6px;align-items:stretch;align-self:center}
+.talkbtns small{font-size:11px;color:#b3bdc9;max-width:120px}
+.tb:disabled{opacity:.4;cursor:default}
 .hint{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--panel) 70%,transparent);padding:2px 8px;border-radius:6px}
 
 /* 지금 고른 것 */
@@ -145,7 +148,7 @@ a{color:inherit}
   <h1>치장 <b>미리보기</b></h1>
   <div class="warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
     <span><b>주의!</b> 해당 자료는 "미리보기" 입니다. 인게임과 차이가 있을 수 있어요. 치장 조합을 고를 때 참고용으로만 사용하세요!</span></div>
-  <p>얼굴 표정·머리 모양·머리색·피부색을 바꿔 가며 캐릭터 얼굴을 3D로 볼 수 있어요. 채팅할 때 말풍선 옆에 뜨는 작은 얼굴도 같이 볼 수 있어요. 고른 조합은 주소에 저장돼서 그대로 공유할 수 있어요.</p>
+  <p>얼굴 표정·머리 모양·머리색·피부색을 바꿔 가며 캐릭터 얼굴을 3D로 볼 수 있어요. 채팅할 때 뜨는 작은 얼굴(채팅 아이콘)도 같이 볼 수 있어요. 고른 조합은 주소에 저장돼서 그대로 공유할 수 있어요.</p>
 </header>
 
 <main class="app">
@@ -174,11 +177,16 @@ a{color:inherit}
     </div>
     <div class="cur" id="cur" role="group" aria-label="지금 고른 치장"></div>
     <div class="chatbox">
-      <div class="chat-h"><b>채팅 미리보기</b><span>게임에서 채팅하면 말풍선 옆에 뜨는 작은 얼굴</span></div>
-      <div class="chat-view"><canvas id="chatCv" role="img" aria-label="채팅 얼굴 미리보기"></canvas></div>
-      <div class="chatbar">
-        <input id="chat" type="text" maxlength="60" placeholder="예: 야" autocomplete="off" aria-label="채팅 내용">
-        <button class="tb" id="tChatPng" title="채팅 미리보기를 PNG로 저장">
+      <div class="chat-h"><b>채팅 아이콘</b><span>게임에서 채팅할 때 뜨는 작은 얼굴 — 게임 설정의 카메라·외곽선 값 그대로, 말할 때 입 뻥끗 (talk_face)</span></div>
+      <div class="chat-view">
+        <figure><canvas id="chatCv" width="160" height="160" role="img" aria-label="채팅 아이콘 확대"></canvas><figcaption>확대</figcaption></figure>
+        <figure><canvas id="chatSmall" width="48" height="48" role="img" aria-label="채팅 아이콘 게임 크기"></canvas><figcaption>게임 크기 (대략)</figcaption></figure>
+        <div class="talkbtns">
+          <button class="tb" id="tTalk" title="게임처럼 입 뻥끗 (talk_face)">💬 말하기</button>
+          <button class="tb" id="tTalkLoop" aria-pressed="true" title="말하기 계속 반복">반복</button>
+          <small id="talkNote"></small>
+        </div>
+        <button class="tb" id="tChatPng" title="채팅 아이콘을 PNG로 저장">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>저장</button>
       </div>
     </div>
@@ -225,7 +233,7 @@ const BODY_DATA = 'costume_data/';   // '몸 보기' = 코스튬 페이지의 �
 const TYPES = ['face', 'hair', 'hairColor', 'skin'];
 const TYPE_KO = { face:'얼굴 표정', hair:'머리 모양', hairColor:'머리색', skin:'피부색' };
 const $ = s => document.querySelector(s);
-const state = { db:null, pack:null, gender:'m', tab:'face', sel:{}, body:false, outline:true, fx:true, spin:false, onlyShop:false };
+const state = { talkLoop:true, db:null, pack:null, gender:'m', tab:'face', sel:{}, body:false, outline:true, fx:true, spin:false, onlyShop:false };
 
 /* ───────── 3D 기본 ───────── */
 const stage = $('#stage');
@@ -494,7 +502,7 @@ async function init(){
     return;
   }
   for (const g of ['m', 'w']) for (const t of TYPES) for (const it of state.db[g]?.[LIST[t]] || []){ it._s = nz(it.name); it._c = chosung(it._s); }
-  readHash(); initBubble();
+  readHash();
   setGenderUI(); renderTabs(); renderGrid(); renderCur();
   await rebuild(true);
 }
@@ -583,8 +591,17 @@ async function rebuild(reset){
   try {
     pulseMats.length = 0; outlines.length = 0; fxSystems.length = 0; scrollers.length = 0;
     const head = [];
-    if (face) head.push(await buildModel(face.file, faceMats(face)));
-    if (hair) head.push(await buildModel(hair.file, hairMats(hair)));
+    if (face){
+      const g = await buildModel(face.file, faceMats(face)); g.userData.role = 'face'; head.push(g);
+      // 말할 때 입 벌린 얼굴 (talk_face) — 맨살 재질에 바꿔 끼울 텍스처 미리 준비
+      if (face.talk){
+        const tt = await loadTex(face.talk).catch(() => null);
+        let skinMesh = null; g.traverse(o => { if (o.isMesh && !o.userData.outline && !skinMesh && face.materials[parseInt((o.name || '').replace(/\D/g, '')) || 0]?.skin) skinMesh = o; });
+        if (!skinMesh) g.traverse(o => { if (o.isMesh && !o.userData.outline && !skinMesh) skinMesh = o; });
+        if (tt && skinMesh) g.userData.talk = { mesh:skinMesh, map:skinTexture(tt, SKIN()) };
+      }
+    }
+    if (hair){ const g = await buildModel(hair.file, hairMats(hair)); g.userData.role = 'hair'; head.push(g); }
     if (face?.fx?.length) head.push(await buildFx(face.fx));
     let body = [];
     if (state.body){
@@ -636,95 +653,91 @@ function look(x, z){
   if (state.spin) $('#tSpin').click();
 }
 
-/* ───────── 채팅 미리보기 (게임 채팅 말풍선: 왼쪽 작은 얼굴 + 말풍선) ─────────
-   말풍선 = 게임 chatbubblewnd.xml 값: 틀 tooltip5 · 기본 너비 88 · 높이 8 + 줄마다 14 · 글자 시작 (7, 5) · 75px 넘으면 줄바꿈 · 최대 4줄.
-   얼굴 = 지금 고른 얼굴·머리·색을 정면에서 작게 찍은 그림. 화면에서는 게임 픽셀 × CHAT_SCALE 로 확대 */
-const CHAT_SCALE = 3, FACE_PX = 24, PORTRAIT_RES = 128;
-const chatCv = $('#chatCv'), cctx = chatCv.getContext('2d');
-const bubbleImg = { frame:null, tail:null };
-const portraitCv = document.createElement('canvas'); portraitCv.width = portraitCv.height = PORTRAIT_RES;
-const portraitRT = new THREE.WebGLRenderTarget(PORTRAIT_RES, PORTRAIT_RES, { samples:4 });
+/* ───────── 채팅 아이콘 (게임에서 채팅하면 뜨는 작은 얼굴) ─────────
+   게임 설정 그대로:
+   - sp2_stage_charselect_map.ini [chat_bubble_cam] cam_offset_z 750 → 카메라는 정면(+z)에서 750 거리
+   - sp2.ini [projection] fov 35
+   - sp2_gui.ini [3d_chat_emoticon] scale 0.77 (모델 크기) · hair_outline_thick 2.25 · head_outline_thick 1.25
+   - race ini [avata_pos] char_angle_x/y 0 → 돌리지 않고 정면
+   → 정면 먼 거리(750 ÷ 0.77)에서 fov 35 로 본 화면 중 머리 부분만 잘라서 그림 */
+const CHAT = { camZ:750, fov:35, scale:0.77, hairOutline:2.25, headOutline:1.25 };
+const ICON_RES = 160;
+const chatCv = $('#chatCv'), chatSmall = $('#chatSmall');
+const portraitRT = new THREE.WebGLRenderTarget(ICON_RES, ICON_RES, { samples:4 });
 portraitRT.texture.colorSpace = THREE.SRGBColorSpace;
-const portraitCam = new THREE.PerspectiveCamera(18, 1, 1, 5000);
+const portraitCam = new THREE.PerspectiveCamera(CHAT.fov, 1, 1, 50000);
 portraitCam.add(new THREE.DirectionalLight(0xffffff, 1.6).translateX(1).translateY(2).translateZ(1.5)); scene.add(portraitCam);
-let portraitReady = false;
-function loadImg(src){ return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
-async function initBubble(){
-  const B = state.db.bubble; if (!B) return;
-  [bubbleImg.frame, bubbleImg.tail] = await Promise.all([B.frame ? loadImg(DATA + B.frame) : null, B.tail ? loadImg(DATA + B.tail) : null]);
-  drawChat();
-}
-// 지금 머리를 정면에서 작게 찍기 (몸·배경 없이)
 function renderPortrait(){
   root.updateMatrixWorld(true);
   const box = new THREE.Box3();
   for (const g of headGroup.children) if (!g.userData.fx) box.expandByObject(g);
-  if (box.isEmpty()){ portraitReady = false; drawChat(); return; }
+  if (box.isEmpty()) return;
   const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
-  const r = Math.max(s.x, s.y) / 2 * 1.0, d = r / Math.tan(THREE.MathUtils.degToRad(portraitCam.fov / 2));
-  portraitCam.position.copy(c).add(new THREE.Vector3(0.12, 0.04, 1).normalize().multiplyScalar(d));
-  portraitCam.lookAt(c); portraitCam.near = d / 50; portraitCam.far = d * 10; portraitCam.updateProjectionMatrix();
-  portraitCam.updateMatrixWorld(true);
+  // 게임 카메라: 정면 750 거리, fov 35, 모델 0.77배 = 모델 기준 거리 750 / 0.77
+  const D = CHAT.camZ / CHAT.scale, half = Math.max(s.x, s.y) / 2 * 1.08;
+  const full = D * Math.tan(THREE.MathUtils.degToRad(CHAT.fov / 2));   // 게임 화면 절반 높이 (모델 단위)
+  portraitCam.position.set(c.x, c.y, c.z + D); portraitCam.lookAt(c);
+  portraitCam.near = D / 10; portraitCam.far = D * 3;
+  // fov 35 화면에서 머리 부분만 잘라내기 (setViewOffset) — 원근은 게임과 같음
+  const px = ICON_RES * full / half;
+  portraitCam.setViewOffset(px, px, (px - ICON_RES) / 2, (px - ICON_RES) / 2, ICON_RES, ICON_RES);
+  portraitCam.updateProjectionMatrix(); portraitCam.updateMatrixWorld(true);
+  // 외곽선 두께: 머리카락 2.25, 얼굴 1.25 (게임 채팅 아이콘 값)
+  const saved = [];
+  headGroup.traverse(o => { if (o.userData.outline && o.material.uniforms?.w){
+    let g = o; while (g && g.parent !== headGroup) g = g.parent;
+    const th = g?.userData.role === 'hair' ? CHAT.hairOutline : CHAT.headOutline;
+    saved.push([o, o.material.uniforms.w.value, o.visible]); o.material.uniforms.w.value = th * 0.32; o.visible = state.outline; } });
   const bodyVis = bodyGroup.visible; bodyGroup.visible = false;
   const oldClear = renderer.getClearColor(new THREE.Color()), oldAlpha = renderer.getClearAlpha();
-  renderer.setRenderTarget(portraitRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, portraitCam);
-  const px = new Uint8Array(PORTRAIT_RES * PORTRAIT_RES * 4);
-  renderer.readRenderTargetPixels(portraitRT, 0, 0, PORTRAIT_RES, PORTRAIT_RES, px);
+  const capture = cv => {
+    renderer.setRenderTarget(portraitRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, portraitCam);
+    const buf = new Uint8Array(ICON_RES * ICON_RES * 4);
+    renderer.readRenderTargetPixels(portraitRT, 0, 0, ICON_RES, ICON_RES, buf);
+    const img = new ImageData(ICON_RES, ICON_RES), row = ICON_RES * 4;
+    for (let y = 0; y < ICON_RES; y++) img.data.set(buf.subarray((ICON_RES - 1 - y) * row, (ICON_RES - y) * row), y * row);  // 위아래 뒤집기
+    cv.width = cv.height = ICON_RES; cv.getContext('2d').putImageData(img, 0, 0);
+  };
+  capture(frameNormal);
+  // 말하는 얼굴 (talk_face) 도 한 장 더
+  const talk = headGroup.children.find(g => g.userData.role === 'face')?.userData.talk;
+  hasTalk = !!talk;
+  if (talk){ const m = talk.mesh.material, old = m.map; m.map = talk.map; m.needsUpdate = true; capture(frameTalk); m.map = old; m.needsUpdate = true; }
   renderer.setRenderTarget(null); renderer.setClearColor(oldClear, oldAlpha); bodyGroup.visible = bodyVis;
-  const img = new ImageData(PORTRAIT_RES, PORTRAIT_RES), row = PORTRAIT_RES * 4;
-  for (let y = 0; y < PORTRAIT_RES; y++) img.data.set(px.subarray((PORTRAIT_RES - 1 - y) * row, (PORTRAIT_RES - y) * row), y * row);  // 위아래 뒤집기
-  portraitCv.getContext('2d').putImageData(img, 0, 0);
-  portraitReady = true; drawChat();
+  for (const [o, w, v] of saved){ o.material.uniforms.w.value = w; o.visible = v; }
+  showFrame(false);
+  $('#tTalk').disabled = !hasTalk;
+  $('#talkNote').textContent = hasTalk ? '' : '이 얼굴은 말하는 표정 그림이 없어요';
+  if (hasTalk) playTalk();
 }
-function wrapLines(ctx, text, B){
-  ctx.font = '12px "Noto Sans KR", "Malgun Gothic", sans-serif';
-  const lines = []; let cur = '';
-  for (const ch of [...text]){
-    if (ctx.measureText(cur + ch).width > B.wrap && cur){ lines.push(cur); cur = ch.trimStart(); if (lines.length >= B.maxLine) break; }
-    else cur += ch;
-  }
-  if (lines.length < B.maxLine && cur) lines.push(cur);
-  return lines.slice(0, B.maxLine);
+// 게임 값 (sp2_gui.ini [3d_chat_emoticon]): 뜨고 200ms 뒤 시작, 120ms 마다 평소↔말하는 얼굴, 1440ms 동안
+const TALK = { start:200, duration:1440, gap:120 };
+const frameNormal = document.createElement('canvas'), frameTalk = document.createElement('canvas');
+let hasTalk = false, talkTimer = null;
+function showFrame(talking){
+  const src = talking && hasTalk ? frameTalk : frameNormal;
+  const c = chatCv.getContext('2d'); chatCv.width = chatCv.height = ICON_RES; c.drawImage(src, 0, 0);
+  // 게임 크기 견본 (말풍선 안 얼굴 칸 52px × emoticon_scale 0.6 기준 근사)
+  const sc = chatSmall.getContext('2d'); chatSmall.width = chatSmall.height = 48;
+  sc.imageSmoothingQuality = 'high'; sc.drawImage(chatCv, 0, 0, 48, 48);
 }
-// 말풍선 하나 그리기 (게임 픽셀 단위, ctx 는 이미 확대돼 있음)
-function drawBubbleBox(ctx, lines, B){
-  const W = B.w, H = B.h + B.lineH * lines.length, o = B.outset, f = bubbleImg.frame;
-  ctx.imageSmoothingEnabled = false;
-  if (f){
-    // 9칸 틀: 모서리 15px, 가운데 1px — 바깥으로 7px 나가게 (게임 OffsetX/Y 7)
-    const X = [-o, -o + 15, W + o - 15], Y = [-o, -o + 15, H + o - 15], WS = [15, W + 2 * o - 30, 15], HS = [15, H + 2 * o - 30, 15];
-    const SX = [0, 15, 16], SW = [15, 1, 15];
-    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) ctx.drawImage(f, SX[i], SX[j], SW[i], SW[j], X[i], Y[j], WS[i], HS[j]);
-  } else {
-    ctx.fillStyle = '#eeede8'; ctx.strokeStyle = '#242424'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(0, 0, W, H, 4); ctx.fill(); ctx.stroke();
-  }
-  ctx.imageSmoothingEnabled = true;
-  ctx.fillStyle = '#282828'; ctx.textBaseline = 'top'; ctx.font = '12px "Noto Sans KR", "Malgun Gothic", sans-serif';
-  lines.forEach((l, i) => ctx.fillText(l, B.x, B.y + i * B.lineH - 1));
-  return H;
+function playTalk(){
+  clearTimeout(talkTimer); showFrame(false);
+  if (!hasTalk) return;
+  const t0 = performance.now() + TALK.start;
+  const step = () => {
+    const t = performance.now() - t0;
+    if (t >= TALK.duration){ showFrame(false); talkTimer = state.talkLoop ? setTimeout(playTalk, 1800) : null; return; }
+    if (t >= 0) showFrame(Math.floor(t / TALK.gap) % 2 === 0);
+    talkTimer = setTimeout(step, 30);
+  };
+  talkTimer = setTimeout(step, TALK.start);
 }
-function drawChat(){
-  const B = state.db?.bubble || { w:88, h:8, lineH:14, x:7, y:5, wrap:75, maxLine:4, outset:7 };
-  const text = $('#chat').value.trim() || $('#chat').placeholder.replace(/^예:\s*/, '');
-  const dpr = Math.min(devicePixelRatio, 2), S = CHAT_SCALE;
-  const lines = wrapLines(cctx, text, B), H = B.h + B.lineH * lines.length;
-  // 게임처럼 얼굴 바로 오른쪽에 말풍선 (말풍선 그림자 7px 은 얼굴 밑으로 겹침), 얼굴은 위에 그림
-  const pad = 10, faceX = pad, bx = faceX + FACE_PX + 1;
-  const Wg = bx + B.w + B.outset + pad, Hg = pad + Math.max(FACE_PX, H) + pad;
-  chatCv.style.width = Wg * S + 'px'; chatCv.style.height = Hg * S + 'px';
-  chatCv.width = Math.round(Wg * S * dpr); chatCv.height = Math.round(Hg * S * dpr);
-  const ctx = cctx; ctx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0); ctx.clearRect(0, 0, Wg, Hg);
-  const top = pad + Math.max(0, (FACE_PX - H) / 2);
-  ctx.save(); ctx.translate(bx, top);
-  drawBubbleBox(ctx, lines, B); ctx.restore();
-  if (portraitReady) ctx.drawImage(portraitCv, faceX, pad + Math.max(0, (H - FACE_PX) / 2), FACE_PX, FACE_PX);
-}
-$('#chat').addEventListener('input', drawChat);
-$('#chat').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('#tTalk').onclick = () => playTalk();
+$('#tTalkLoop').onclick = e => { state.talkLoop = !state.talkLoop; e.currentTarget.setAttribute('aria-pressed', state.talkLoop); if (state.talkLoop) playTalk(); };
 $('#tChatPng').onclick = () => {
-  const a = document.createElement('a'); a.href = chatCv.toDataURL('image/png');
-  a.download = `채팅얼굴_${['face','hair'].map(t => itemOf(t, state.sel[t])?.name || '').join('_')}.png`.replace(/\s+/g, '');
+  const a = document.createElement('a'); a.href = frameNormal.toDataURL('image/png');
+  a.download = `채팅아이콘_${['face','hair'].map(t => itemOf(t, state.sel[t])?.name || '').join('_')}.png`.replace(/\s+/g, '');
   document.body.append(a); a.click(); a.remove();
 };
 
