@@ -293,8 +293,8 @@ function expandQuery(q){
 const hit = (text, qs) => { const t = nz(text); return qs.some(x => t.includes(x)); };
 
 const isR = d => d[0]==='R';
-const rk = d => d==='X'?2:isR(d)?1:0;
-const dirs = Object.keys(D.m).sort((a,b)=> rk(a)!==rk(b) ? rk(a)-rk(b) : isR(a) ? D.m[a].localeCompare(D.m[b],'ko') : +a-+b);
+const rk = d => d==='X'?3:isR(d)?2:(+d>=500?1:0);
+const dirs = Object.keys(D.m).sort((a,b)=> rk(a)!==rk(b) ? rk(a)-rk(b) : isR(a) ? D.m[a].localeCompare(D.m[b],'ko') : +b-+a);
 const sel = $('#merc');
 const GRADE = {}; D.items.forEach(i => { if (/^\d+$/.test(i[0]) && i[2]==='무기' && i[1].startsWith('기본') && !(i[0] in GRADE)) GRADE[i[0]] = ({'':'일반','1':'일반','2':'프리미엄','3':'레어','4':'유니크','6':'콜라보'})[i[5]] || '일반'; });
 const GORDER = ['일반','유니크','프리미엄','레어','콜라보'];
